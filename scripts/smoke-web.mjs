@@ -98,6 +98,12 @@ try {
   await page.getByText("$100.000 de $200.000", { exact: true }).waitFor();
   await page.getByRole("tab", { name: "Actividad" }).click();
   await button("Exportar Excel").click();
+  assert.equal(await button("Subir Excel a Drive").isEnabled(), false);
+  await page
+    .getByText("Conecta Google desde Ajustes para habilitar esta opción.", {
+      exact: true,
+    })
+    .waitFor();
   const downloadPromise = page.waitForEvent("download");
   await button("Generar y compartir XLSX").click();
   const download = await downloadPromise;

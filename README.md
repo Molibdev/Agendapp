@@ -30,7 +30,7 @@ Stack: Expo 58, React Native 0.88, React 19.3, Expo Router, TypeScript, TanStack
 - Ajustes: modo claro/nocturno persistido, cuenta, sincronización, respaldos y categorías de gasto personalizadas. Se pueden agregar y renombrar sin perder referencias del historial.
 - Calendario móvil desplazable, adaptado al alto disponible, con selección y día actual destacados. Colores y contornos con mayor contraste en ambos temas.
 - **Copia JSON descargable y restaurable** con todos los datos financieros, incluidos recurrentes y eventos de agenda. Formato versionado, validación y confirmación antes de reemplazar el perfil actual. Sin contraseñas ni sesiones. Límite de importación de 10 MB. Guarda el archivo fuera de la app para recuperarlo después de reinstalar.
-- Excel para análisis; no se usa como formato de restauración.
+- Excel para análisis: descargar/compartir o subir directamente a Google Drive desde Actividad → Exportar Excel. Requiere conectar Google y habilitar Drive API para subir; no se usa como formato de restauración.
 - Registro/inicio/cierre de sesión Supabase y sincronización de instantáneas con RLS y control de conflictos (requiere configurar proyecto).
 - Google Drive: conexión OAuth con `drive.file`, guardar/listar/restaurar copias JSON (requiere configurar Google en Supabase). Copias manuales; no hay backups automáticos con la app cerrada.
 

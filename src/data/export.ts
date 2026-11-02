@@ -1,24 +1,27 @@
-import * as XLSX from "xlsx";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
 import { State } from "../domain/finance";
-import { createWorkbook } from "../domain/workbook";
+import { createExcelFile } from "../domain/excel";
 export async function exportExcel(s: State, from: string, to: string) {
-  const workbook = createWorkbook(s, from, to);
-  const filename = `Agendapp_${from}_${to}.xlsx`;
+  const { name: filename, bytes, mimeType } = createExcelFile(s, from, to);
   if (Platform.OS === "web") {
-    XLSX.writeFile(workbook, filename);
+    const url = URL.createObjectURL(
+      new Blob([new Uint8Array(bytes).buffer], { type: mimeType }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
     return;
   }
   if (!(await Sharing.isAvailableAsync()))
     throw new Error("Este dispositivo no permite compartir archivos");
-  const bytes = XLSX.write(workbook, { type: "array", bookType: "xlsx" });
   const file = new File(Paths.cache, filename);
   file.write(new Uint8Array(bytes));
   await Sharing.shareAsync(file.uri, {
-    mimeType:
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    mimeType,
     UTI: "org.openxmlformats.spreadsheetml.sheet",
   });
 }

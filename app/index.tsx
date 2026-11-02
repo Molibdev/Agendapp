@@ -46,6 +46,7 @@ import { SettingsToggle } from "../src/components/SettingsToggle";
 import { Agenda } from "../src/components/Agenda";
 import { useAuth } from "../src/data/auth";
 import { exportExcel } from "../src/data/export";
+import { uploadExcelDrive } from "../src/data/drive";
 
 type Tab = "Inicio" | "Actividad" | "Cuentas" | "Planes" | "Ajustes" | "Agenda";
 type Form =
@@ -233,10 +234,15 @@ export default function Home() {
   const [month, setMonth] = useState(today().slice(0, 7));
   const [to, setTo] = useState(today());
   const [message, setMessage] = useState("");
+  const [driveExport, setDriveExport] = useState<{
+    name: string;
+    range: string;
+  } | null>(null);
   const [duplicate, setDuplicate] = useState<Transaction | null>(null);
   const [busy, setBusy] = useState(false);
   const open = (f: Form) => {
     setForm(f);
+    setDriveExport(null);
     setName("");
     setAmount("");
     setDate(f === "export" ? `${month}-01` : today());
@@ -309,6 +315,26 @@ export default function Home() {
     await save(command);
     setForm(null);
     setMessage("");
+  };
+  const sendExcelToDrive = async () => {
+    if (busy || saving) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const token = session?.provider_token;
+      if (!token)
+        throw new Error("Conecta Google desde Ajustes para autorizar Drive.");
+      const result = await uploadExcelDrive(token, s, date, to);
+      setDriveExport({ name: result.name, range: `${date}:${to}` });
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo subir el Excel a Drive",
+      );
+    } finally {
+      setBusy(false);
+    }
   };
   const submit = async () => {
     setMessage("");
@@ -1302,6 +1328,50 @@ export default function Home() {
                       void submit();
                     }}
                   />
+                )}
+                {form === "export" && (
+                  <View style={[styles.card, { padding: 16 }]}>
+                    <Text style={styles.cardTitle}>
+                      Tu Excel, también en Drive
+                    </Text>
+                    <Text style={styles.body}>
+                      Guarda el informe del intervalo seleccionado en el Drive
+                      de la cuenta Google conectada. Cada subida crea un archivo
+                      nuevo; el Excel es un informe y no sirve para restaurar
+                      datos.
+                    </Text>
+                    {!session?.provider_token && (
+                      <Text style={styles.muted}>
+                        Conecta Google desde Ajustes para habilitar esta opción.
+                      </Text>
+                    )}
+                    <Button
+                      label={busy ? "Procesando…" : "Subir Excel a Drive"}
+                      disabled={
+                        busy ||
+                        saving ||
+                        !session?.provider_token ||
+                        driveExport?.range === `${date}:${to}`
+                      }
+                      onPress={() => {
+                        void sendExcelToDrive();
+                      }}
+                    />
+                    {driveExport && (
+                      <Text accessibilityRole="alert" style={styles.body}>
+                        Guardado en Drive: {driveExport.name}
+                      </Text>
+                    )}
+                    <Button
+                      label="Configurar Google Drive"
+                      secondary
+                      disabled={busy || saving}
+                      onPress={() => {
+                        setForm(null);
+                        setTab("Ajustes");
+                      }}
+                    />
+                  </View>
                 )}
                 <Button
                   label="Cancelar"

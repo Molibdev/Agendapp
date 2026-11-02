@@ -41,11 +41,11 @@ Los valores configurados en el entorno cloud no se copian automáticamente al co
 
 Este chat necesita acceso autorizado al proyecto, además de la clave pública del cliente. Si no hay un conector Supabase, se puede configurar un token personal mediante los ajustes seguros del entorno:
 
-| Variable | Uso | Dónde obtenerla |
-| --- | --- | --- |
-| `EXPO_PUBLIC_SUPABASE_URL` | URL base del cliente | Connect / Data API del proyecto |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Clave pública del cliente | API Keys del proyecto |
-| `SUPABASE_ACCESS_TOKEN` | Administración mediante la API de Supabase; solo entorno de trabajo | Cuenta de Supabase → Access Tokens |
+| Variable                        | Uso                                                                 | Dónde obtenerla                    |
+| ------------------------------- | ------------------------------------------------------------------- | ---------------------------------- |
+| `EXPO_PUBLIC_SUPABASE_URL`      | URL base del cliente                                                | Connect / Data API del proyecto    |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Clave pública del cliente                                           | API Keys del proyecto              |
+| `SUPABASE_ACCESS_TOKEN`         | Administración mediante la API de Supabase; solo entorno de trabajo | Cuenta de Supabase → Access Tokens |
 
 El token personal no es la contraseña de la base de datos ni la clave `service_role`. Declararlo como secreto destinado a `api.supabase.com`, nunca como variable `EXPO_PUBLIC_*`, ni en chat, archivos versionados o configuración de la app. Si se usa un token temporal de configuración, revocarlo cuando finalice el trabajo. La URL de proyecto también debe estar permitida por la política de red del entorno.
 
@@ -100,3 +100,20 @@ Para la función actual de copias en Drive:
 5. Guardar, listar y restaurar una copia con confirmación. Probar autorización cancelada y token vencido.
 
 Conectar Google inicia sesión con esa cuenta y puede cambiar el perfil de datos. Se usa el token Google de esa sesión; cuando vence hay que reconectar. Supabase renueva su propia sesión, no el token del proveedor. Las copias son manuales; no hay backups automáticos con la app cerrada. Drive requiere `www.googleapis.com` en la política de red; el navegador debe poder acceder a Google para autorizar la conexión.
+
+## 6. Subir Excel directamente a Google Drive
+
+La opción está en **Actividad → Exportar Excel → Subir Excel a Drive**. Usa el mismo intervalo y las nueve hojas del informe descargable. No convierte el archivo a Google Sheets. El archivo se crea en el Drive de la cuenta autorizada; no se comparte públicamente ni se sobrescriben archivos anteriores. Los Excel no aparecen en Ver copias de Drive, reservado para JSON restaurables. La descarga/compartición habitual sigue disponible sin conectar Google.
+
+Si el login Google ya funciona, reutilizar ese mismo proyecto y cliente OAuth:
+
+1. En Google Cloud seleccionar el proyecto cuyo Client ID está configurado en el proveedor Google de Supabase.
+2. Ir a **APIs & Services → Library**, buscar **Google Drive API** y pulsar **Enable** (o comprobar que esté habilitada).
+3. En **Google Auth Platform → Data Access** (o OAuth consent screen → Scopes) revisar `https://www.googleapis.com/auth/drive.file`. Agendapp solicita ese alcance limitado, no acceso completo a Drive. Si la app está en Testing, incluir las cuentas que harán las pruebas en Audience / Test users.
+4. Mantener el callback que ya usa Supabase para el login; no crear otro proyecto o reemplazar sus secretos si el acceso actual funciona.
+5. Actualizar Agendapp y pulsar **Ajustes → Conectar Google**. Volver a conceder consentimiento, incluido el acceso a archivos creados o abiertos con la app. Una sesión anterior sin esos permisos no basta. Conectar una cuenta diferente puede cambiar el perfil activo; verificar sus datos antes de exportar.
+6. Exportar un intervalo corto, pulsar **Subir Excel a Drive** y esperar **Guardado en Drive: Agendapp\_...xlsx**. Buscar ese nombre en Mi unidad de la cuenta autorizada, abrirlo y comprobar los importes.
+
+La app pide renovar consentimiento al reconectar. No almacena un refresh token de Google ni mantiene una autorización permanente: si el token vence o desaparece al renovar la sesión Supabase, reconectar desde Ajustes. No se suben informes automáticamente; la acción siempre es del usuario. El éxito solo se muestra cuando Google devuelve un ID de archivo. Después de un corte de red, revisar Drive antes de reintentar porque la subida podría haber llegado y el reintento crearía otra copia.
+
+El asistente puede implementar y probar el envío con transporte simulado. Habilitar la API y el consentimiento reales exige acceso al proyecto Google Cloud. Una compilación de desarrollo permite validar correctamente el flujo OAuth en móvil; no basta generar un bundle para afirmar que la subida real fue probada.

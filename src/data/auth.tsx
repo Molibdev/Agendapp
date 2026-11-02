@@ -56,12 +56,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!supabase) return;
     let alive = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (alive) {
-        setSession(data.session);
-        setLoading(false);
-      }
-    }).catch(()=>{if(alive)setLoading(false);});
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (alive) {
+          setSession(data.session);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (alive) setLoading(false);
+      });
     const { data } = supabase.auth.onAuthStateChange((_event, value) => {
       setSession(value);
       setLoading(false);
@@ -87,6 +92,7 @@ export async function connectGoogle() {
     options: {
       redirectTo,
       scopes: "https://www.googleapis.com/auth/drive.file",
+      queryParams: { prompt: "consent" },
       skipBrowserRedirect: Platform.OS !== "web",
     },
   });

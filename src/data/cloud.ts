@@ -1,5 +1,5 @@
 import { supabase } from "./auth";
-import { validateState, makeBackup, readBackup } from "../domain/backup";
+import { validateState } from "../domain/backup";
 import { State } from "../domain/finance";
 export async function pullCloud(userId: string) {
   if (!supabase) throw new Error("Supabase no está configurado");
@@ -45,52 +45,9 @@ export async function pushCloud(
     );
   return Number(result.data.revision);
 }
-async function driveRequest(
-  token: string,
-  url: string,
-  init: RequestInit = {},
-) {
-  const response = await fetch(url, {
-    ...init,
-    headers: { ...init.headers, Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok)
-    throw new Error(
-      `Google Drive respondió ${response.status}. Vuelve a conectar Google si expiró la sesión.`,
-    );
-  return response;
-}
-export async function uploadDrive(token: string, state: State) {
-  const boundary = `qgasto_${Date.now()}`;
-  const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name: `Agendapp-${new Date().toISOString()}.json`, mimeType: "application/json", appProperties: { app: "qgasto", format: "backup-v1" } })}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${makeBackup(state)}\r\n--${boundary}--`;
-  await driveRequest(
-    token,
-    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
-    {
-      method: "POST",
-      headers: { "Content-Type": `multipart/related; boundary=${boundary}` },
-      body,
-    },
-  );
-}
-export async function listDrive(
-  token: string,
-): Promise<{ id: string; name: string }[]> {
-  const q = encodeURIComponent(
-    "trashed = false and appProperties has { key='app' and value='qgasto' }",
-  );
-  const response = await driveRequest(
-    token,
-    `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=createdTime%20desc&pageSize=20&fields=files(id,name)`,
-  );
-  return (await response.json()).files;
-}
-export async function restoreDrive(token: string, id: string) {
-  const response = await driveRequest(
-    token,
-    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media`,
-  );
-  const size = Number(response.headers.get("content-length"));
-  if (size > 10 * 1024 * 1024) throw new Error("El archivo supera 10 MB");
-  return readBackup(await response.text());
-}
+export {
+  uploadDrive,
+  listDrive,
+  restoreDrive,
+  uploadExcelDrive,
+} from "./drive";

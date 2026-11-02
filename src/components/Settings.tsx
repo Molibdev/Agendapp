@@ -324,9 +324,10 @@ export function Settings({
       <View style={styles.card}>
         <Text style={styles.section}>Google Drive</Text>
         <Text style={styles.body}>
-          Conecta tu cuenta Google para guardar y restaurar copias JSON en
-          Drive. Solo se solicita acceso a archivos creados por Agendapp.
-          Conectar Google inicia sesión con esa cuenta y usa su perfil de datos.
+          Conecta tu cuenta Google para subir informes Excel y guardar o
+          restaurar copias JSON en Drive. Solo se solicita acceso a archivos
+          creados por Agendapp. Conectar Google inicia sesión con esa cuenta y
+          usa su perfil de datos.
         </Text>
         {button(
           "Conectar Google",
@@ -335,6 +336,11 @@ export function Settings({
           },
           !supabase,
         )}
+        <Text style={styles.body}>
+          Para subir un Excel, ve a Actividad → Exportar Excel, elige las fechas
+          y pulsa Subir Excel a Drive. Si la autorización caduca, vuelve a
+          conectar Google.
+        </Text>
         {session && (
           <>
             {button("Guardar copia en Drive", () => {
