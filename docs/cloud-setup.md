@@ -1,41 +1,102 @@
-# Activar Supabase y Google Drive
+# Activar Supabase en Agendapp
 
-No se necesita ninguna cuenta externa para las funciones locales, los recurrentes ni los respaldos JSON. Estos pasos solo son necesarios para activar autenticación, sincronización y Drive. No se ha creado ningún proyecto ni aplicado migraciones remotamente.
+La app funciona localmente sin cuentas externas. Supabase añade usuarios y sincronización de finanzas y Agenda. Conectar la organización Supabase con GitHub no crea las tablas, no conecta Expo y no habilita Google automáticamente. Esta guía describe tareas pendientes; no implica que ya se hayan ejecutado en el servidor.
 
-## 1. Crear Supabase
+## 1. Conectar el proyecto existente
 
-1. Crea una cuenta en https://supabase.com y un proyecto. Guarda la contraseña de la base de datos en tu gestor de contraseñas.
-2. En el SQL Editor del proyecto ejecuta las migraciones de `supabase/migrations/` en orden: primero `202610310001_core.sql`, después `202611010001_snapshots.sql` y finalmente `202611010003_account_details.sql`. También puedes usar el CLI de Supabase enlazado al proyecto y `supabase db push`.
-3. En la configuración del proyecto copia la URL del proyecto y su clave pública **anon o publishable**. Copia `.env.example` a `.env.local` e introduce ambos valores. Nunca uses una clave `service_role` en Expo. Las variables `EXPO_PUBLIC_*` son públicas y se incluyen en el bundle.
-4. Reinicia Expo. En Ajustes → Cuenta y sincronización puedes crear una cuenta por correo/contraseña. Si está habilitada la confirmación de correo (recomendado), confirma antes de iniciar sesión.
-5. En Authentication → URL Configuration configura Site URL y registra el origen web real que utilizas y `qgasto://` como redirecciones autorizadas para la aplicación nativa. Para producción usa el dominio HTTPS de tu aplicación, sin comodines amplios.
-6. Comprueba con dos cuentas que los datos permanecen aislados; con dos dispositivos comprueba sincronización, modo offline y conflictos. Las políticas RLS deben impedir leer y modificar filas de otro usuario.
+El proyecto indicado es **Agendapp Project**, en **Molibdev Org**:
 
-El cliente sincroniza **instantáneas JSON** en `finance_snapshots`. Las tablas relacionales de la migración original quedan como base para una futura migración de almacenamiento; no se escriben simultáneamente. La revisión optimista impide que un dispositivo sobrescriba silenciosamente datos remotos más recientes.
+- URL base: `https://argaugyjsccoznvdvtvw.supabase.co`
+- Referencia del proyecto: `argaugyjsccoznvdvtvw`
 
-Al iniciar sesión se cambia de perfil local. Para trasladar datos del perfil sin sesión: descarga su JSON, inicia sesión e impórtalo. No se mezclan perfiles automáticamente. Cerrar sesión conserva la caché del perfil; en dispositivos compartidos considera la persistencia local de datos financieros.
+Usar la URL base en Expo, sin `/rest/v1/`. Comprobar en el panel que el proyecto corresponde a esa referencia antes de administrar su base de datos.
 
-## 2. Configurar Google
+En Connect o Settings → API Keys / Data API obtener la clave **publishable** (o la clave pública heredada **anon**). La interfaz de Supabase puede variar. La clave pública está diseñada para el cliente; el aislamiento de datos lo determinan las políticas RLS. No usar una clave `secret`, `service_role`, un token personal ni una contraseña de base de datos en Expo.
 
-1. Crea un proyecto en https://console.cloud.google.com y habilita **Google Drive API**.
-2. Configura la pantalla de consentimiento OAuth (nombre Qgasto, correo de soporte, usuarios de prueba mientras esté en modo de pruebas).
-3. Crea un cliente OAuth de tipo Web. Añade como URI autorizada la URL callback que muestra Supabase al configurar el proveedor Google (normalmente `https://TU-PROYECTO.supabase.co/auth/v1/callback`).
-4. Activa Google en Authentication → Providers de Supabase. Introduce allí el Client ID y Client Secret. **El secret no debe estar en el código ni en las variables Expo.**
-5. Desde Ajustes de Qgasto pulsa Conectar Google. Esto inicia sesión en la cuenta Google seleccionada y usa su perfil financiero; puede cambiar el usuario que estaba conectado.
-6. Autoriza el scope `https://www.googleapis.com/auth/drive.file`. Permite que la app acceda a sus propios archivos, sin acceso completo al Drive del usuario.
-7. Prueba Guardar copia en Drive y Ver copias de Drive. Selecciona una copia y confirma su restauración en Copias de seguridad.
+### En Windows
 
-El acceso a Drive utiliza el `provider_token` de esa sesión OAuth; cuando expire, vuelve a conectar Google. Supabase renueva su propia sesión, no el token del proveedor Google. Se listan las 20 copias más recientes creadas por Qgasto. Los archivos permanecen en Drive hasta que el usuario los elimine allí.
+Desde la carpeta del repositorio, en Símbolo del sistema:
 
-**No hay respaldo automático con la aplicación cerrada.** Para implementarlo se necesita un flujo de autorización offline separado, refresh tokens cifrados en servidor, revocación, Edge Functions y Cron con jobs idempotentes. Esta entrega realiza las copias cuando el usuario las solicita; no finge una automatización sin servidor configurado.
+```bat
+copy .env.example .env.local
+notepad .env.local
+```
 
-## Comprobación antes de publicar
+Si `.env.local` ya existe, editarlo sin reemplazar valores propios. Introducir:
 
-- Aplicar migraciones en un proyecto de pruebas y verificar RLS con dos usuarios.
-- Alta, confirmación, inicio/cierre de sesión, reinicio de app y cambio de perfil.
-- Dos dispositivos editando la misma revisión: debe mostrarse conflicto sin pérdida de datos. Primero descargar JSON local; luego elegir explícitamente Cargar nube si se desea descartar lo local.
-- Corte de red: guardar localmente y usar Sincronizar ahora tras recuperar conexión.
-- Consentimiento cancelado, token Drive expirado, guardar/listar/restaurar copia.
-- En móvil usar un development build con el esquema `qgasto`; configurar el callback real. Probar Android e iOS físicos.
+```dotenv
+EXPO_PUBLIC_SUPABASE_URL=https://argaugyjsccoznvdvtvw.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=TU_CLAVE_PUBLICA_PUBLISHABLE_O_ANON
+```
 
-Si usas una política de red restringida en el entorno cloud, habilita el hostname exacto de tu proyecto Supabase y `www.googleapis.com`; el navegador del usuario debe poder acceder a `accounts.google.com`. No reemplaces otras entradas de red que el entorno ya utilice.
+El nombre de la segunda variable se conserva por compatibilidad; admite la clave publishable. Ambas variables son públicas y se incorporan al bundle. `.env.local` está ignorado por Git. No subirlo al repositorio. Después de configurar las tablas y autenticación, reiniciar:
+
+```bat
+npx expo start --clear
+```
+
+Los valores configurados en el entorno cloud no se copian automáticamente al computador Windows ni a EAS Build: cada entorno necesita sus propias variables.
+
+### Para que el asistente configure el servidor
+
+Este chat necesita acceso autorizado al proyecto, además de la clave pública del cliente. Si no hay un conector Supabase, se puede configurar un token personal mediante los ajustes seguros del entorno:
+
+| Variable | Uso | Dónde obtenerla |
+| --- | --- | --- |
+| `EXPO_PUBLIC_SUPABASE_URL` | URL base del cliente | Connect / Data API del proyecto |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Clave pública del cliente | API Keys del proyecto |
+| `SUPABASE_ACCESS_TOKEN` | Administración mediante la API de Supabase; solo entorno de trabajo | Cuenta de Supabase → Access Tokens |
+
+El token personal no es la contraseña de la base de datos ni la clave `service_role`. Declararlo como secreto destinado a `api.supabase.com`, nunca como variable `EXPO_PUBLIC_*`, ni en chat, archivos versionados o configuración de la app. Si se usa un token temporal de configuración, revocarlo cuando finalice el trabajo. La URL de proyecto también debe estar permitida por la política de red del entorno.
+
+Guardar un borrador de configuración no ejecuta migraciones ni instala credenciales. Tras introducir los valores seguros y aplicar/publicar la configuración según indique la interfaz del entorno, comprobar su presencia y probar el acceso real antes de administrar el servidor. Si no se quiere conceder acceso administrativo al asistente, los pasos SQL pueden ejecutarse directamente en el panel.
+
+## 2. Crear las tablas y políticas
+
+En el **SQL Editor del proyecto correcto**, ejecutar los archivos de `supabase/migrations/` por separado y en este orden:
+
+1. `202610310001_core.sql`
+2. `202611010001_snapshots.sql`
+3. `202611010003_account_details.sql`
+
+El asistente debe inspeccionar primero las tablas y migraciones existentes. Estos archivos están pensados para una instalación nueva: no volver a ejecutarlos ciegamente si hay tablas creadas. Si un archivo falla, investigar el error antes de continuar; no borrar tablas para resolverlo.
+
+Después ejecutar `supabase/verify-setup.sql`. Es una consulta de solo lectura para revisar tablas, RLS, políticas, permisos y trigger de revisión. Sus resultados no sustituyen las pruebas de aislamiento con usuarios reales.
+
+El cliente actual guarda **instantáneas JSON** en `finance_snapshots`, incluidos los eventos de Agenda. Las otras tablas constituyen la base relacional preparatoria; el cliente no escribe simultáneamente ambos modelos. No se necesita una tabla independiente de eventos para el flujo actual. Las revisiones evitan sobrescrituras silenciosas entre dispositivos.
+
+## 3. Empezar con correo y contraseña
+
+En Authentication → Sign In / Providers comprobar que Email esté habilitado y revisar la política de confirmación de correo. Agendapp ya ofrece en Ajustes → Cuenta y sincronización: crear cuenta, iniciar sesión, cerrar sesión, sincronizar y cargar datos de la nube.
+
+Para probar el login sin depender todavía de la entrega de correos, se pueden crear dos usuarios de prueba confirmados desde Authentication → Users. Para probar registro público con confirmación y recuperación de contraseña, configurar SMTP propio: el envío incorporado de Supabase está restringido a pruebas y destinatarios autorizados del equipo. No considerar listo el registro público solo por activar Email. La app todavía no ofrece un flujo completo de recuperación de contraseña.
+
+En Authentication → URL Configuration establecer Site URL al origen web real y las redirecciones exactas utilizadas. Para el teléfono, los esquemas actuales son `agendapp://` y el alias heredado `qgasto://`; registrar la URL de retorno exacta que genere la compilación, incluida su ruta. No usar comodines amplios de producción. Las credenciales de correo permiten probar login en Expo Go; los flujos OAuth y las redirecciones nativas necesitan una compilación de desarrollo.
+
+## 4. Validar antes de usar datos reales
+
+- Con dos usuarios: comprobar que A no puede leer ni escribir el snapshot de B usando peticiones autenticadas. Validar RLS también en la API; la separación visual de la app no lo demuestra.
+- Registrar, confirmar si corresponde, iniciar/cerrar sesión y reiniciar la app. Verificar errores de credenciales y usuarios no confirmados.
+- Crear un evento y un movimiento; comprobar que el mismo usuario los recupera en otro dispositivo. Ambos dispositivos deben usar la versión actual.
+- Probar sin conexión y sincronizar al recuperarla. Editar la misma revisión en dos dispositivos y comprobar el aviso de conflicto sin pérdida de la copia local.
+- Para trasladar el perfil invitado: descargar JSON antes de iniciar sesión e importarlo en la cuenta. No se mezclan perfiles automáticamente. Cerrar sesión conserva la caché local del perfil.
+
+## 5. Google: acceso y Drive son tareas separadas
+
+**Google no es necesario para activar correo y contraseña.** Para el acceso con Google se requiere configurar un cliente OAuth en Google Cloud, la pantalla de consentimiento y el proveedor Google en Supabase. La URI autorizada en Google debe coincidir con el callback que muestre Supabase, normalmente `https://argaugyjsccoznvdvtvw.supabase.co/auth/v1/callback`. El Client Secret se introduce en Supabase, nunca en Expo.
+
+El código actual ofrece **Conectar Google** asociado a Drive y solicita `drive.file`. Todavía no existe un botón independiente de acceso Google sin permisos de archivos. No presentar ese flujo como si ya estuviera separado. Antes de ampliar el login, separar la identidad básica de la conexión opcional a Drive y probar ambas rutas.
+
+Para probar Google en móvil usar una **development build**, no Expo Go. Las bibliotecas nativas de Google y los flujos OAuth requieren configuración propia de la aplicación. Desde Windows se puede trabajar con Android o utilizar compilaciones en la nube, según el destino.
+
+### Drive opcional
+
+Para la función actual de copias en Drive:
+
+1. Habilitar Google Drive API en el proyecto Google Cloud.
+2. Configurar consentimiento OAuth con nombre Agendapp y usuarios de prueba mientras corresponda.
+3. Configurar Client ID/Secret en el proveedor Google de Supabase y las URLs de retorno reales.
+4. Desde Agendapp, conectar Google y autorizar `https://www.googleapis.com/auth/drive.file`.
+5. Guardar, listar y restaurar una copia con confirmación. Probar autorización cancelada y token vencido.
+
+Conectar Google inicia sesión con esa cuenta y puede cambiar el perfil de datos. Se usa el token Google de esa sesión; cuando vence hay que reconectar. Supabase renueva su propia sesión, no el token del proveedor. Las copias son manuales; no hay backups automáticos con la app cerrada. Drive requiere `www.googleapis.com` en la política de red; el navegador debe poder acceder a Google para autorizar la conexión.
