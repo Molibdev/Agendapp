@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient, Session } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
-import * as Linking from "expo-linking";
+import { isRunningInExpoGo } from "expo";
 import * as WebBrowser from "expo-web-browser";
 const nativeStorage = {
   async getItem(key: string) {
@@ -92,8 +92,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export const useAuth = () => useContext(AuthContext);
 async function googleOAuth(driveAccess: boolean) {
   if (!supabase) throw new Error("Configura Supabase antes de conectar Google");
+  if (Platform.OS !== "web" && isRunningInExpoGo())
+    throw new Error(
+      "Para acceder con Google abre la compilación instalada de Agendapp, no Expo Go.",
+    );
+  // Keep the Android OAuth callback stable regardless of Metro's IP or port.
   const redirectTo =
-    Platform.OS === "web" ? window.location.origin : Linking.createURL("/");
+    Platform.OS === "web" ? window.location.origin : "agendapp:///";
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {

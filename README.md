@@ -57,3 +57,7 @@ Más detalles: [arquitectura](docs/architecture.md). La especificación adjunta 
 La marca visible es Agendapp. El paquete npm y el slug de Expo usan `agendapp`. Se admiten los enlaces `agendapp://` y `qgasto://`; se mantienen las claves internas de almacenamiento, respaldo y Drive para conservar datos, sesiones, enlaces y copias anteriores. Los iconos reproducen en vector el símbolo del logo proporcionado. Los iconos y el nombre nativo requieren una nueva compilación de la app instalada.
 
 El repositorio sigue en `Molibdev/Qgasto` hasta que su propietario lo renombre a `Agendapp` en GitHub → Settings → General → Repository name. Después, los checkouts existentes pueden actualizar su remoto con `git remote set-url origin https://github.com/Molibdev/Agendapp.git`.
+
+## Android: compilación de desarrollo
+
+Ver [guía Android](docs/android-development.md). El proyecto incluye `expo-dev-client` y el perfil EAS `development`, que genera un APK para instalar en el teléfono. Se requiere una cuenta Expo y vincular el proyecto con `eas init`; no hay un APK generado ni un proyecto EAS vinculado hasta completar esos pasos. Después de instalar, iniciar Metro con `npm run start:dev` y abrir la app Agendapp instalada. El retorno de Google en Android es `agendapp:///`, registrado en las Redirect URLs de Supabase.
