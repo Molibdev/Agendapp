@@ -127,3 +127,9 @@ Si el login Google ya funciona, reutilizar ese mismo proyecto y cliente OAuth:
 La app pide renovar consentimiento al reconectar. No almacena un refresh token de Google ni mantiene una autorización permanente: si el token vence o desaparece al renovar la sesión Supabase, reconectar desde Ajustes. No se suben informes automáticamente; la acción siempre es del usuario. El éxito solo se muestra cuando Google devuelve un ID de archivo. Después de un corte de red, revisar Drive antes de reintentar porque la subida podría haber llegado y el reintento crearía otra copia.
 
 El asistente puede implementar y probar el envío con transporte simulado. Habilitar la API y el consentimiento reales exige acceso al proyecto Google Cloud. Una compilación de desarrollo permite validar correctamente el flujo OAuth en móvil; no basta generar un bundle para afirmar que la subida real fue probada.
+
+## Diagnóstico: `window is not defined` al iniciar web
+
+Expo renderiza las rutas web en Node. El cliente Supabase debe desactivar persistencia, renovación y detección de sesión en ese contexto; no puede usar AsyncStorage web hasta estar en el navegador. La app conserva la persistencia normal en navegador y móvil. `npm run test:ssr` comprueba la exportación web con configuración pública ficticia de Supabase para detectar esta regresión sin usar credenciales ni administrar proyectos reales. Si se cambia autenticación, ejecutar esta prueba además de tipos y las pruebas de dominio.
+
+El runtime documentado es Node 24 con npm 11. Si se usa otra versión, volver a la soportada para mantener un entorno reproducible; ese cambio no sustituye la corrección de SSR.

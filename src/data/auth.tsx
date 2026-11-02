@@ -34,14 +34,21 @@ const nativeStorage = {
 };
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+// Expo renders web routes in Node before hydration. AsyncStorage's web adapter
+// requires window.localStorage; only the browser may recover persisted sessions.
+const serverRendering = Platform.OS === "web" && typeof window === "undefined";
 export const supabase =
   url && key
     ? createClient(url, key, {
         auth: {
-          storage: Platform.OS === "web" ? AsyncStorage : nativeStorage,
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: Platform.OS === "web",
+          storage: serverRendering
+            ? undefined
+            : Platform.OS === "web"
+              ? AsyncStorage
+              : nativeStorage,
+          persistSession: !serverRendering,
+          autoRefreshToken: !serverRendering,
+          detectSessionInUrl: Platform.OS === "web" && !serverRendering,
           flowType: "pkce",
         },
       })
