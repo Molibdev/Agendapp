@@ -46,7 +46,8 @@
     "test:ssr": "node scripts/check-web-ssr.mjs",
     "start:dev": "expo start --dev-client",
     "build:android:dev": "npx eas-cli@27.2.0 build --platform android --profile development",
-    "test:accounts:web": "node scripts/smoke-accounts.mjs"
+    "test:accounts:web": "node scripts/smoke-accounts.mjs",
+    "check:public-key": "node scripts/check-public-client-key.mjs"
   },
   "private": true
 }
