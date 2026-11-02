@@ -85,7 +85,17 @@ En Authentication → URL Configuration establecer Site URL al origen web real y
 
 **Google no es necesario para activar correo y contraseña.** Para el acceso con Google se requiere configurar un cliente OAuth en Google Cloud, la pantalla de consentimiento y el proveedor Google en Supabase. La URI autorizada en Google debe coincidir con el callback que muestre Supabase, normalmente `https://argaugyjsccoznvdvtvw.supabase.co/auth/v1/callback`. El Client Secret se introduce en Supabase, nunca en Expo.
 
-El código actual ofrece **Conectar Google** asociado a Drive y solicita `drive.file`. Todavía no existe un botón independiente de acceso Google sin permisos de archivos. No presentar ese flujo como si ya estuviera separado. Antes de ampliar el login, separar la identidad básica de la conexión opcional a Drive y probar ambas rutas.
+En Cuenta y sincronización, **Continuar con Google** solicita solo `openid email profile`. **Conectar Google**, en la sección Drive, añade `drive.file` y vuelve a pedir consentimiento. Primero configurar y validar el login básico; Drive es una etapa posterior y opcional.
+
+### Configurar primero el login Google
+
+1. Abrir Google Cloud Console y crear un proyecto **Agendapp**, o seleccionar uno existente destinado a esta app. La organización de Supabase no crea una organización Google Cloud; se puede usar Sin organización si corresponde a la cuenta Google.
+2. En **Google Auth Platform → Branding**, completar nombre Agendapp, correo de soporte y contacto. En **Audience**, seleccionar External para cuentas Google externas al dominio, mantener Testing al comenzar y agregar los correos de prueba. En Data Access usar únicamente los permisos básicos de identidad, sin Drive.
+3. En **Clients → Create client**, crear un cliente de tipo **Web application**. Supabase gestiona el callback web incluso cuando Agendapp es móvil. En Authorized redirect URIs introducir el callback exacto mostrado por Supabase → Authentication → Providers → Google. Para este proyecto normalmente es `https://argaugyjsccoznvdvtvw.supabase.co/auth/v1/callback`. No confundir ese callback con Site URL de Agendapp.
+4. Copiar Client ID y Client Secret directamente a **Supabase → Authentication → Providers → Google**, activar el proveedor y guardar. El secreto permanece en Supabase; no se pone en `.env.local`, GitHub ni chat.
+5. Para la primera prueba en Windows, usar `npx expo start --web --port 8081`. En **Supabase → Authentication → URL Configuration** configurar Site URL y una Redirect URL con el origen que se abra realmente, por ejemplo `http://localhost:8081`. Si se usa `127.0.0.1`, registrar ese origen exacto en lugar de asumir que equivale a localhost.
+6. En el navegador, abrir Ajustes → Cuenta y sincronización → Continuar con Google, elegir una cuenta de prueba y autorizar la identidad. Verificar el regreso a Agendapp, el correo y Cerrar sesión; cerrar y volver a entrar. Crear un evento y confirmar la sincronización del perfil en `finance_snapshots`.
+7. Tras validar web, preparar la development build móvil y registrar su redirect exacto en Supabase. Repetir login/logout y persistencia en el dispositivo. Mantener Drive pendiente hasta completar estas pruebas.
 
 Para probar Google en móvil usar una **development build**, no Expo Go. Las bibliotecas nativas de Google y los flujos OAuth requieren configuración propia de la aplicación. Desde Windows se puede trabajar con Android o utilizar compilaciones en la nube, según el destino.
 

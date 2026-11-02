@@ -4,7 +4,7 @@ import { useTheme } from "./theme";
 import { randomUUID } from "expo-crypto";
 import { Command, State } from "../domain/finance";
 import { downloadBackup, pickBackup } from "../data/backup";
-import { connectGoogle, supabase, useAuth } from "../data/auth";
+import { connectGoogle, signInGoogle, supabase, useAuth } from "../data/auth";
 import { listDrive, restoreDrive, uploadDrive } from "../data/cloud";
 type Props = {
   state: State;
@@ -280,6 +280,13 @@ export function Settings({
               Al iniciar sesión se usa un perfil separado. Para llevar tus datos
               locales a tu cuenta, descarga una copia e impórtala una vez
               conectado.
+            </Text>
+            {button("Continuar con Google", () => {
+              void run(signInGoogle, "Sesión iniciada con Google");
+            })}
+            <Text style={styles.muted}>
+              Accede con tu cuenta Google o con correo y contraseña. El acceso
+              con Google no solicita permisos de Drive.
             </Text>
             <TextInput
               accessibilityLabel="Correo electrónico"

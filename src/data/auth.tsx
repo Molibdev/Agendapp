@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 export const useAuth = () => useContext(AuthContext);
-export async function connectGoogle() {
+async function googleOAuth(driveAccess: boolean) {
   if (!supabase) throw new Error("Configura Supabase antes de conectar Google");
   const redirectTo =
     Platform.OS === "web" ? window.location.origin : Linking.createURL("/");
@@ -91,14 +91,20 @@ export async function connectGoogle() {
     provider: "google",
     options: {
       redirectTo,
-      scopes: "https://www.googleapis.com/auth/drive.file",
-      queryParams: { prompt: "consent" },
+      scopes: driveAccess
+        ? "openid email profile https://www.googleapis.com/auth/drive.file"
+        : "openid email profile",
+      queryParams: { prompt: driveAccess ? "consent" : "select_account" },
       skipBrowserRedirect: Platform.OS !== "web",
     },
   });
   if (error) throw error;
   if (Platform.OS !== "web" && data.url) {
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    if (result.type !== "success")
+      throw new Error(
+        "Acceso con Google cancelado. Puedes volver a intentarlo.",
+      );
     if (result.type === "success") {
       const code = new URL(result.url).searchParams.get("code");
       if (!code)
@@ -108,3 +114,7 @@ export async function connectGoogle() {
     }
   }
 }
+
+// Signing in does not request permission to read or create Drive files.
+export const signInGoogle = () => googleOAuth(false);
+export const connectGoogle = () => googleOAuth(true);
