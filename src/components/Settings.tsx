@@ -4,7 +4,14 @@ import { useTheme } from "./theme";
 import { randomUUID } from "expo-crypto";
 import { Command, State } from "../domain/finance";
 import { downloadBackup, pickBackup } from "../data/backup";
-import { connectGoogle, signInGoogle, supabase, useAuth } from "../data/auth";
+import {
+  connectGoogle,
+  signInGoogle,
+  supabase,
+  useAuth,
+  accountRedirect,
+} from "../data/auth";
+import { accountEmail, requestAccountEmail } from "../data/accountActions";
 import { listDrive, restoreDrive, uploadDrive } from "../data/cloud";
 type Props = {
   state: State;
@@ -13,6 +20,7 @@ type Props = {
   sync: () => Promise<void>;
   pull: () => Promise<void>;
   syncMessage: string;
+  logout: (forget?: boolean) => Promise<void>;
 };
 export function Settings({
   state,
@@ -21,6 +29,7 @@ export function Settings({
   sync,
   pull,
   syncMessage,
+  logout,
 }: Props) {
   const { styles, dark, toggle } = useTheme(),
     { session } = useAuth();
@@ -30,6 +39,8 @@ export function Settings({
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [categoryName, setCategoryName] = useState("");
   const [categoryMessage, setCategoryMessage] = useState("");
+  const [forgetConfirmation, setForgetConfirmation] = useState(false);
+  const [accountMessage, setAccountMessage] = useState("");
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [message, setMessage] = useState(""),
@@ -45,6 +56,7 @@ export function Settings({
     setMessageArea(area);
     setBusy(true);
     setMessage("");
+    setAccountMessage("");
     try {
       await action();
       setMessage(success);
@@ -77,7 +89,7 @@ export function Settings({
       throw new Error(
         "Introduce un correo y contraseña de al menos 8 caracteres",
       );
-    return { email: email.trim(), password };
+    return { email: accountEmail(email), password };
   };
   return (
     <View style={{ gap: 20 }}>
@@ -267,12 +279,35 @@ export function Settings({
                 {button("Cancelar carga de nube", () => setConfirmCloud(false))}
               </>
             )}
+            <Text style={styles.muted}>
+              Cerrar sesión afecta solo a este dispositivo. Puedes conservar la
+              copia local o eliminarla después de sincronizar.
+            </Text>
             {button("Cerrar sesión", () => {
-              void run(async () => {
-                const { error } = await supabase!.auth.signOut();
-                if (error) throw error;
-              }, "Sesión cerrada. Datos conservados en el perfil del dispositivo.");
+              void run(() => logout(false), "");
             })}
+            {button("Cerrar sesión y borrar copia local", () =>
+              setForgetConfirmation(true),
+            )}
+            {forgetConfirmation && (
+              <View style={[styles.card, { padding: 16 }]}>
+                <Text style={styles.cardTitle}>
+                  ¿Eliminar la copia de este perfil?
+                </Text>
+                <Text style={styles.body}>
+                  Primero intentaremos sincronizar. Si hay errores o conflictos,
+                  no borraremos la copia ni cerraremos la sesión. Se conservan
+                  los datos de la nube, el perfil invitado y los archivos
+                  descargados.
+                </Text>
+                {button("Confirmar cierre y borrado local", () => {
+                  void run(() => logout(true), "");
+                })}
+                {button("Conservar copia y volver", () =>
+                  setForgetConfirmation(false),
+                )}
+              </View>
+            )}
           </>
         ) : (
           <>
@@ -311,20 +346,67 @@ export function Settings({
               void run(async () => {
                 const { error } =
                   await supabase!.auth.signInWithPassword(credentials());
-                if (error) throw error;
+                if (error)
+                  throw new Error(
+                    error.code === "email_not_confirmed"
+                      ? "Confirma tu correo antes de entrar. Puedes usar Reenviar confirmación."
+                      : error.code === "invalid_credentials"
+                        ? "Correo o contraseña incorrectos."
+                        : error.message,
+                  );
                 setPassword("");
               }, "Sesión iniciada");
             })}
             {button("Crear cuenta", () => {
               void run(async () => {
-                const { data, error } =
-                  await supabase!.auth.signUp(credentials());
+                const { data, error } = await supabase!.auth.signUp({
+                  ...credentials(),
+                  options: { emailRedirectTo: accountRedirect() },
+                });
                 if (error) throw error;
                 setPassword("");
-                if (!data.session)
-                  setMessage("Revisa tu correo para confirmar la cuenta.");
-              }, "Revisa tu correo si se solicita confirmación.");
+                setAccountMessage(
+                  data.session
+                    ? "Cuenta creada y sesión iniciada."
+                    : "Revisa tu correo para confirmar la cuenta antes de iniciar sesión. Si ya existe, puedes intentar acceder o recuperar la contraseña.",
+                );
+              }, "");
             })}
+            <Text style={styles.cardTitle}>¿Necesitas ayuda para entrar?</Text>
+            <Text style={styles.muted}>
+              Escribe tu correo arriba para recuperar la contraseña o reenviar
+              la confirmación. No necesitas escribir la contraseña para estas
+              opciones.
+            </Text>
+            {button("Olvidé mi contraseña", () => {
+              void run(async () => {
+                setAccountMessage(
+                  await requestAccountEmail(
+                    supabase!.auth,
+                    "recovery",
+                    email,
+                    accountRedirect(),
+                  ),
+                );
+              }, "");
+            })}
+            {button("Reenviar confirmación", () => {
+              void run(async () => {
+                setAccountMessage(
+                  await requestAccountEmail(
+                    supabase!.auth,
+                    "confirmation",
+                    email,
+                    accountRedirect(),
+                  ),
+                );
+              }, "");
+            })}
+            {!!accountMessage && (
+              <Text accessibilityRole="alert" style={styles.body}>
+                {accountMessage}
+              </Text>
+            )}
           </>
         )}
       </View>

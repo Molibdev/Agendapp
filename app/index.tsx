@@ -193,6 +193,7 @@ export default function Home() {
     sync,
     pull,
     syncMessage,
+    logout,
   } = useFinance();
   const contentScroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const fade = useRef(new Animated.Value(1)).current;
@@ -1031,6 +1032,7 @@ export default function Home() {
                 sync={sync}
                 pull={pull}
                 syncMessage={syncMessage}
+                logout={logout}
               />
             )}
             <Text style={styles.footer}>

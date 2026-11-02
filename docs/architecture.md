@@ -10,7 +10,7 @@ Presupuestos por mes calendario y categoría, con avisos al 80% y 100%. Los apor
 
 ## Persistencia y restauración
 
-TanStack Query mantiene la vista de datos y AsyncStorage conserva la copia del dispositivo. Las escrituras se serializan por perfil y se persisten antes de actualizar la UI. El invitado conserva la clave de almacenamiento original. Cada usuario de Supabase usa otra clave y caché independiente. Cerrar sesión no elimina su copia local.
+TanStack Query mantiene la vista de datos y AsyncStorage conserva la copia del dispositivo. Las escrituras se serializan por perfil y se persisten antes de actualizar la UI. El invitado conserva la clave de almacenamiento original. Cada usuario de Supabase usa otra clave y caché independiente. Cerrar sesión conserva su copia local por defecto; existe una opción confirmada para borrarla tras sincronizar. Ver [gestión de cuentas](account-management.md).
 
 `src/domain/backup.ts` define el formato JSON `qgasto-backup`, versión 1, fecha UTC y estado financiero completo. Zod y las comprobaciones de referencias e IDs rechazan archivos incompatibles. No se incluyen sesiones ni contraseñas. Importar muestra un resumen y exige confirmación antes de reemplazar; no mezcla colecciones. Máximo 10 MB. El archivo externo permite recuperar datos cuando se pierde el almacenamiento local; no depende del caché de la app. No está cifrado: almacenarlo en un lugar privado.
 

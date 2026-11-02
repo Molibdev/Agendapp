@@ -18,18 +18,21 @@ import { AppState } from "react-native";
 import { validateState } from "../domain/backup";
 import { useAuth } from "./auth";
 import { pullCloud, pushCloud } from "./cloud";
-import { useEffect, useState } from "react";
+import { logoutProfile } from "./accountActions";
+import { supabase } from "./auth";
+import { useEffect, useState, useMemo } from "react";
 export const client = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: Infinity } },
 });
 type Local = { state: State; revision: number; dirty: boolean };
 export function useFinance() {
-  const { session, loading } = useAuth(),
+  const { session, loading, setAccountNotice } = useAuth(),
     owner = session?.user.id ?? "guest",
     cache = useQueryClient();
   const queryKey = ["finance", owner],
     key = owner === "guest" ? "qgasto:data:v1" : `qgasto:data:${owner}`;
   const [syncMessage, setSyncMessage] = useState("");
+  const lifecycle = useMemo(() => ({ closing: false }), [owner]);
   const query = useQuery({
     queryKey,
     enabled: !loading,
@@ -69,10 +72,50 @@ export function useFinance() {
         | { command: Command }
         | { restore: State }
         | { sync: true }
-        | { pull: true },
+        | { pull: true }
+        | { logout: true; forget: boolean },
     ) => {
+      if (lifecycle.closing && !("logout" in action))
+        throw new Error("La sesión se está cerrando.");
       const local = cache.getQueryData<Local>(queryKey);
       if (!local) throw new Error("Espera a que se carguen los datos");
+      if ("logout" in action) {
+        if (!session || !supabase) throw new Error("No hay sesión activa.");
+        await logoutProfile({
+          forget: action.forget,
+          flush: async () => {
+            try {
+              const next = await reconcile(
+                local,
+                await pullCloud(owner),
+                (state, revision) => pushCloud(owner, state, revision),
+              );
+              await AsyncStorage.setItem(key, JSON.stringify(next));
+              cache.setQueryData(queryKey, next);
+            } catch (error) {
+              if (error instanceof Error && error.message.includes("Conflicto"))
+                throw error;
+              throw new Error(
+                "No se pudo sincronizar. La copia local y la sesión se conservan. Revisa la conexión o los permisos antes de volver a intentarlo.",
+              );
+            }
+          },
+          read: () => AsyncStorage.getItem(key),
+          remove: () => AsyncStorage.removeItem(key),
+          restore: (raw) => AsyncStorage.setItem(key, raw),
+          signOut: async () => {
+            const { error } = await supabase!.auth.signOut({ scope: "local" });
+            if (error) throw error;
+          },
+        });
+        if (action.forget) cache.removeQueries({ queryKey, exact: true });
+        setAccountNotice(
+          action.forget
+            ? "Sesión cerrada. La copia de este perfil se eliminó de este dispositivo. Los datos de la nube y el perfil invitado se conservan."
+            : "Sesión cerrada. La copia local de este perfil se conserva en el dispositivo.",
+        );
+        return;
+      }
       let next = local;
       if ("command" in action) {
         const state = apply(local.state, action.command);
@@ -138,6 +181,16 @@ export function useFinance() {
   return {
     ...query,
     data: query.data?.state,
+    logout: async (forget = false) => {
+      if (lifecycle.closing) throw new Error("La sesión se está cerrando.");
+      lifecycle.closing = true;
+      try {
+        await mutation.mutateAsync({ logout: true, forget });
+      } catch (error) {
+        lifecycle.closing = false;
+        throw error;
+      }
+    },
     save: (command: Command) => mutation.mutateAsync({ command }),
     restore: (state: State) => mutation.mutateAsync({ restore: state }),
     sync: () => mutation.mutateAsync({ sync: true }),

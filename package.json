@@ -40,12 +40,13 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx tests/finance.test.ts && node --import tsx tests/backup.test.ts && node --import tsx tests/sync.test.ts && node --import tsx tests/accounts.test.ts && node --import tsx tests/agenda.test.ts && node --import tsx tests/drive.test.ts",
+    "test": "node --import tsx tests/finance.test.ts && node --import tsx tests/backup.test.ts && node --import tsx tests/sync.test.ts && node --import tsx tests/accounts.test.ts && node --import tsx tests/agenda.test.ts && node --import tsx tests/drive.test.ts && node --import tsx tests/account.test.ts",
     "build:web": "expo export --platform web",
     "test:web": "node scripts/smoke-web.mjs && node scripts/smoke-agenda.mjs",
     "test:ssr": "node scripts/check-web-ssr.mjs",
     "start:dev": "expo start --dev-client",
-    "build:android:dev": "npx eas-cli@27.2.0 build --platform android --profile development"
+    "build:android:dev": "npx eas-cli@27.2.0 build --platform android --profile development",
+    "test:accounts:web": "node scripts/smoke-accounts.mjs"
   },
   "private": true
 }

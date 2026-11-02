@@ -4,6 +4,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient, Session } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 import { isRunningInExpoGo } from "expo";
+import * as Linking from "expo-linking";
+import {
+  RECOVERY_MARKER,
+  nativeAuthCode,
+  validRecoveryMarker,
+} from "./accountActions";
 import * as WebBrowser from "expo-web-browser";
 const nativeStorage = {
   async getItem(key: string) {
@@ -56,35 +62,137 @@ export const supabase =
 const AuthContext = createContext<{
   session: Session | null;
   loading: boolean;
-}>({ session: null, loading: true });
+  recovering: boolean;
+  accountNotice: string;
+  setAccountNotice: (message: string) => void;
+  finishRecovery: () => Promise<void>;
+}>({
+  session: null,
+  loading: true,
+  recovering: false,
+  accountNotice: "",
+  setAccountNotice: () => {},
+  finishRecovery: async () => {},
+});
+
+export function accountRedirect() {
+  if (Platform.OS !== "web" && isRunningInExpoGo())
+    throw new Error(
+      "Abre Agendapp instalada para usar los enlaces de correo, no Expo Go.",
+    );
+  return Platform.OS === "web" ? window.location.origin : "agendapp:///";
+}
+const callbacks = new Map<string, Promise<void>>();
+async function completeNativeAuth(url: string) {
+  if (!supabase) return;
+  const callback = nativeAuthCode(url);
+  if (!callback) return;
+  const { code, flowId } = callback;
+  let pending = callbacks.get(code);
+  if (!pending) {
+    pending = (async () => {
+      const { error } = await supabase!.auth.exchangeCodeForSession(code, {
+        flowId,
+      });
+      if (error)
+        throw new Error(
+          "No se pudo completar el enlace. Ábrelo en el dispositivo donde lo solicitaste o pide uno nuevo.",
+        );
+    })();
+    if (callbacks.size >= 20) callbacks.delete(callbacks.keys().next().value!);
+    callbacks.set(code, pending);
+  }
+  await pending;
+}
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null),
-    [loading, setLoading] = useState(Boolean(supabase));
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(Boolean(supabase));
+  const [recovering, setRecovering] = useState(false);
+  const [accountNotice, setAccountNotice] = useState("");
   useEffect(() => {
     if (!supabase) return;
-    let alive = true;
+    let alive = true,
+      eventReceived = false;
+    let eventSession: Session | null = null;
+    const { data } = supabase.auth.onAuthStateChange((event, value) => {
+      if (!alive) return;
+      eventReceived = true;
+      eventSession = value;
+      setSession(value);
+      if (event === "PASSWORD_RECOVERY" && value) {
+        setRecovering(true);
+        void AsyncStorage.setItem(
+          RECOVERY_MARKER,
+          JSON.stringify({
+            userId: value.user.id,
+            expiresAt: Date.now() + 15 * 60 * 1000,
+          }),
+        ).catch(() => {});
+      }
+      if (event === "SIGNED_OUT") {
+        setRecovering(false);
+        void AsyncStorage.removeItem(RECOVERY_MARKER).catch(() => {});
+      }
+    });
     void supabase.auth
       .getSession()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
+        const raw = await AsyncStorage.getItem(RECOVERY_MARKER);
         if (alive) {
-          setSession(data.session);
+          const current = eventReceived ? eventSession : data.session;
+          if (!eventReceived) setSession(current);
+          if (current && validRecoveryMarker(raw, current.user.id))
+            setRecovering(true);
           setLoading(false);
         }
       })
       .catch(() => {
         if (alive) setLoading(false);
       });
-    const { data } = supabase.auth.onAuthStateChange((_event, value) => {
-      setSession(value);
-      setLoading(false);
-    });
+    const handle = (url: string) => {
+      void completeNativeAuth(url).catch((error) => {
+        if (alive)
+          setAccountNotice(
+            error instanceof Error
+              ? error.message
+              : "No se pudo abrir el enlace de acceso.",
+          );
+      });
+    };
+    let subscription: ReturnType<typeof Linking.addEventListener> | undefined;
+    if (Platform.OS !== "web") {
+      subscription = Linking.addEventListener("url", ({ url }) => handle(url));
+      void Linking.getInitialURL()
+        .then((url) => {
+          if (alive && url) handle(url);
+        })
+        .catch(() => {});
+    } else if (new URL(window.location.href).searchParams.has("error")) {
+      setAccountNotice(
+        "El enlace de correo venció o fue rechazado. Solicita uno nuevo.",
+      );
+    }
     return () => {
       alive = false;
       data.subscription.unsubscribe();
+      subscription?.remove();
     };
   }, []);
+  const finishRecovery = async () => {
+    setRecovering(false);
+    await AsyncStorage.removeItem(RECOVERY_MARKER).catch(() => {});
+  };
   return (
-    <AuthContext.Provider value={{ session, loading }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        loading,
+        recovering,
+        accountNotice,
+        setAccountNotice,
+        finishRecovery,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -97,8 +205,7 @@ async function googleOAuth(driveAccess: boolean) {
       "Para acceder con Google abre la compilación instalada de Agendapp, no Expo Go.",
     );
   // Keep the Android OAuth callback stable regardless of Metro's IP or port.
-  const redirectTo =
-    Platform.OS === "web" ? window.location.origin : "agendapp:///";
+  const redirectTo = accountRedirect();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -118,11 +225,7 @@ async function googleOAuth(driveAccess: boolean) {
         "Acceso con Google cancelado. Puedes volver a intentarlo.",
       );
     if (result.type === "success") {
-      const code = new URL(result.url).searchParams.get("code");
-      if (!code)
-        throw new Error("Google no devolvió un código de autorización");
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (error) throw error;
+      await completeNativeAuth(result.url);
     }
   }
 }

@@ -69,7 +69,7 @@ El cliente actual guarda **instantáneas JSON** en `finance_snapshots`, incluido
 
 En Authentication → Sign In / Providers comprobar que Email esté habilitado y revisar la política de confirmación de correo. Agendapp ya ofrece en Ajustes → Cuenta y sincronización: crear cuenta, iniciar sesión, cerrar sesión, sincronizar y cargar datos de la nube.
 
-Para probar el login sin depender todavía de la entrega de correos, se pueden crear dos usuarios de prueba confirmados desde Authentication → Users. Para probar registro público con confirmación y recuperación de contraseña, configurar SMTP propio: el envío incorporado de Supabase está restringido a pruebas y destinatarios autorizados del equipo. No considerar listo el registro público solo por activar Email. La app todavía no ofrece un flujo completo de recuperación de contraseña.
+Para probar el login sin depender todavía de la entrega de correos, se pueden crear dos usuarios de prueba confirmados desde Authentication → Users. Para probar registro público con confirmación y recuperación de contraseña, configurar SMTP propio: el envío incorporado de Supabase está restringido a pruebas y destinatarios autorizados del equipo. No considerar listo el registro público solo por activar Email. La app ofrece recuperación y reenvío de confirmación; su entrega real debe validarse tras configurar SMTP. Ver [gestión de cuentas](account-management.md).
 
 En Authentication → URL Configuration establecer Site URL al origen web real y las redirecciones exactas utilizadas. Para el teléfono, los esquemas actuales son `agendapp://` y el alias heredado `qgasto://`; registrar la URL de retorno exacta que genere la compilación, incluida su ruta. No usar comodines amplios de producción. Las credenciales de correo permiten probar login en Expo Go; los flujos OAuth y las redirecciones nativas necesitan una compilación de desarrollo.
 
@@ -79,7 +79,7 @@ En Authentication → URL Configuration establecer Site URL al origen web real y
 - Registrar, confirmar si corresponde, iniciar/cerrar sesión y reiniciar la app. Verificar errores de credenciales y usuarios no confirmados.
 - Crear un evento y un movimiento; comprobar que el mismo usuario los recupera en otro dispositivo. Ambos dispositivos deben usar la versión actual.
 - Probar sin conexión y sincronizar al recuperarla. Editar la misma revisión en dos dispositivos y comprobar el aviso de conflicto sin pérdida de la copia local.
-- Para trasladar el perfil invitado: descargar JSON antes de iniciar sesión e importarlo en la cuenta. No se mezclan perfiles automáticamente. Cerrar sesión conserva la caché local del perfil.
+- Para trasladar el perfil invitado: descargar JSON antes de iniciar sesión e importarlo en la cuenta. No se mezclan perfiles automáticamente. Cerrar sesión conserva la caché local del perfil por defecto; la opción de borrar copia local la elimina tras sincronizar y confirmar.
 
 ## 5. Google: acceso y Drive son tareas separadas
 
