@@ -65,10 +65,26 @@ try {
   await page.getByRole("switch", { name: "Un día antes", exact: true }).check();
   await page.getByRole("switch", { name: "El mismo día", exact: true }).check();
   await expect(
-    page.getByText(/Las notificaciones móviles aún no se envían/),
+    page.getByText(/En Android, avisa a la hora del evento/),
   ).toBeVisible();
   await button("Guardar evento").click();
   await expect(edit("Planificación")).toBeVisible();
+  await expect(
+    page.getByText(/^i Las preferencias se guardarán/),
+  ).toBeVisible();
+  await button("Cerrar notificación").click();
+  await expect(
+    page.getByText("✓ Evento creado", { exact: true }),
+  ).toBeVisible();
+  await edit("Planificación").click();
+  await expect(button("Cerrar notificación")).toHaveCount(1);
+  await expect(
+    page.getByText("✓ Evento creado", { exact: true }),
+  ).toBeVisible();
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: "/tmp/agendapp-feedback-editor.png" });
+  await button("Cerrar notificación").click();
+  await button("Cancelar evento").click();
   await page.reload();
   await page.getByRole("tab", { name: "Agenda", exact: true }).click();
   await edit("Planificación").click();

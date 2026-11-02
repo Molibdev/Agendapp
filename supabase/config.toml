@@ -1,0 +1,5 @@
+project_id = "agendapp"
+
+[functions.drive-service]
+# User JWTs are verified by Auth /user inside the function. Cron uses its own secret.
+verify_jwt = false

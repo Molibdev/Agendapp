@@ -32,6 +32,7 @@ try {
         EXPO_NO_DOTENV: "1",
         EXPO_PUBLIC_SUPABASE_URL: "https://account-test.invalid",
         EXPO_PUBLIC_SUPABASE_ANON_KEY: "public-browser-fixture",
+        EXPO_PUBLIC_DRIVE_AUTOMATION_ENABLED: "true",
       },
     },
   );
@@ -113,6 +114,12 @@ try {
     logoutCalls = 0,
     remote = null,
     blockSync = false;
+  const drive = {
+    connected: true,
+    automatic_enabled: false,
+    last_backup_at: null,
+    status: "connected",
+  };
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.route("https://account-test.invalid/**", async (route) => {
@@ -125,6 +132,21 @@ try {
         body: JSON.stringify(body),
       });
     const body = request.postData() ? JSON.parse(request.postData()) : null;
+    if (url.pathname === "/functions/v1/drive-service") {
+      assert.equal(request.headers().authorization, `Bearer ${jwt}`);
+      if (body.action === "status") return json(200, drive);
+      if (body.action === "preferences") {
+        assert.equal(typeof body.enabled, "boolean");
+        drive.automatic_enabled = body.enabled;
+        return json(200, { automatic_enabled: body.enabled });
+      }
+      if (body.action === "disconnect") {
+        drive.connected = false;
+        drive.automatic_enabled = false;
+        return json(200, { connected: false });
+      }
+      throw new Error("Unexpected drive action: " + body.action);
+    }
     if (url.pathname === "/auth/v1/recover") {
       assert.equal(body.email, user.email);
       assert.ok(body.code_challenge);
@@ -193,7 +215,7 @@ try {
   await field("Correo electrónico").fill(user.email);
   await button("Reenviar confirmación").click();
   await expect(
-    page.getByText(/Si el correo corresponde a una cuenta que lo necesita/),
+    page.getByText(/^Si el correo corresponde a una cuenta que lo necesita/),
   ).toBeVisible();
   await button("Olvidé mi contraseña").click();
   await expect.poll(() => recoverRedirect).not.toBe("");
@@ -220,6 +242,23 @@ try {
   await page.reload();
   await settings();
   await expect(button("Cerrar sesión")).toBeVisible();
+  const daily = page.getByRole("switch", {
+    name: "Activar respaldo diario",
+    exact: true,
+  });
+  await expect(daily).toBeEnabled();
+  while (await button("Cerrar notificación").count())
+    await button("Cerrar notificación").click();
+  // Controlled value is updated after the server confirms the preference.
+  await daily.click();
+  await expect(daily).toBeChecked();
+  await expect(
+    page.getByText("✓ Respaldo diario activado", { exact: true }),
+  ).toBeVisible();
+  await button("Cerrar notificación").click();
+  await daily.click();
+  await expect(daily).not.toBeChecked();
+  assert.equal(drive.automatic_enabled, false);
   await field("Nombre de categoría").fill("Cuenta de prueba");
   await button("Agregar categoría").click();
   await expect(
@@ -297,7 +336,7 @@ try {
   await expect(button("Cerrar sesión")).toBeVisible();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: mocked recovery email + PKCE exchange + reload + password update; confirmation resend + callback; expired link; local-only signout; protected cleanup and other-profile preservation.",
+    "PASS: mocked recovery email + PKCE exchange + reload + password update; confirmation resend + callback; expired link; local-only signout; protected cleanup and other-profile preservation; Drive daily backup opt-in/out and floating feedback.",
   );
 } catch (error) {
   if (page)

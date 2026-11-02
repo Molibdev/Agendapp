@@ -18,6 +18,7 @@ import { AppState } from "react-native";
 import { validateState } from "../domain/backup";
 import { useAuth } from "./auth";
 import { pullCloud, pushCloud } from "./cloud";
+import { notify } from "./feedback";
 import { logoutProfile } from "./accountActions";
 import { supabase } from "./auth";
 import { useEffect, useState, useMemo } from "react";
@@ -139,6 +140,37 @@ export function useFinance() {
       if (JSON.stringify(next) === JSON.stringify(local)) return;
       await AsyncStorage.setItem(key, JSON.stringify(next));
       cache.setQueryData(queryKey, next);
+      if ("command" in action) {
+        const labels: Record<string, string> = {
+          transaction:
+            action.command.kind === "transaction" &&
+            action.command.value.type === "income"
+              ? "Ingreso registrado"
+              : "Gasto registrado",
+          "update-transaction": "Movimiento actualizado",
+          event: "Evento creado",
+          "update-event": "Evento actualizado",
+          "delete-event": "Evento eliminado",
+          account: "Cuenta creada",
+          "update-account": "Cuenta actualizada",
+          category: "Categoría guardada",
+          budget: "Presupuesto guardado",
+          goal: "Meta creada",
+          contribution: "Aporte guardado",
+          recurring: "Recurrente guardado",
+          "toggle-recurring": "Recurrente actualizado",
+          "process-recurring": "Movimientos recurrentes registrados",
+        };
+        if (labels[action.command.kind]) notify(labels[action.command.kind]);
+      }
+      if ("restore" in action) notify("Copia restaurada");
+      if ("sync" in action)
+        notify(
+          "Cuenta sincronizada",
+          "success",
+          `sync:${owner}:${next.revision}`,
+        );
+      if ("pull" in action) notify("Datos de la nube cargados");
     },
   });
   const revision = query.data?.revision,
@@ -149,7 +181,15 @@ export function useFinance() {
       void mutation
         .mutateAsync({ sync: true })
         .then(() => setSyncMessage("Sincronizado"))
-        .catch((e) => setSyncMessage(e.message));
+        .catch((e) => {
+          setSyncMessage(e.message);
+          if (!lifecycle.closing)
+            notify(
+              "No se pudo sincronizar. Tus cambios se conservan en este dispositivo.",
+              "error",
+              `sync-error:${owner}`,
+            );
+        });
     }, 2000);
     return () => clearTimeout(timer);
   }, [owner, revision, dirty, query.dataUpdatedAt]);
@@ -168,9 +208,15 @@ export function useFinance() {
       if (state === "active") {
         process();
         if (session)
-          void mutation
-            .mutateAsync({ sync: true })
-            .catch((e) => setSyncMessage(e.message));
+          void mutation.mutateAsync({ sync: true }).catch((e) => {
+            setSyncMessage(e.message);
+            if (!lifecycle.closing)
+              notify(
+                "No se pudo sincronizar. Tus cambios se conservan en este dispositivo.",
+                "error",
+                `sync-error:${owner}`,
+              );
+          });
       }
     });
     return () => {

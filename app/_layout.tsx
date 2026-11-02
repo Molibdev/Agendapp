@@ -1,4 +1,5 @@
 import { AccountRecovery } from "../src/components/AccountRecovery";
+import { FloatingFeedback } from "../src/components/FloatingFeedback";
 import { Stack } from "expo-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -15,6 +16,7 @@ export default function Layout() {
             <CalendarProvider>
               <Stack screenOptions={{ headerShown: false }} />
               <AccountRecovery />
+              <FloatingFeedback />
             </CalendarProvider>
           </ThemeProvider>
         </AuthProvider>

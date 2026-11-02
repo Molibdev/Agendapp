@@ -3,6 +3,9 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient, Session } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
+import { driveAutomationEnabled, driveService } from "./driveAutomation";
+import { stripGoogleRefresh } from "../../supabase/functions/drive-service/core";
+import { notify } from "./feedback";
 import { isRunningInExpoGo } from "expo";
 import * as Linking from "expo-linking";
 import {
@@ -50,8 +53,26 @@ export const supabase =
           storage: serverRendering
             ? undefined
             : Platform.OS === "web"
-              ? AsyncStorage
-              : nativeStorage,
+              ? {
+                  ...AsyncStorage,
+                  setItem: (key: string, value: string) =>
+                    AsyncStorage.setItem(
+                      key,
+                      driveAutomationEnabled
+                        ? stripGoogleRefresh(value)
+                        : value,
+                    ),
+                }
+              : {
+                  ...nativeStorage,
+                  setItem: (key: string, value: string) =>
+                    nativeStorage.setItem(
+                      key,
+                      driveAutomationEnabled
+                        ? stripGoogleRefresh(value)
+                        : value,
+                    ),
+                },
           persistSession: !serverRendering,
           autoRefreshToken: !serverRendering,
           detectSessionInUrl: Platform.OS === "web" && !serverRendering,
@@ -116,9 +137,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let eventSession: Session | null = null;
     const { data } = supabase.auth.onAuthStateChange((event, value) => {
       if (!alive) return;
+      const previousUser = eventSession?.user.id;
       eventReceived = true;
       eventSession = value;
+      if (event === "SIGNED_IN" && value && value.user.id !== previousUser)
+        notify("Sesión iniciada", "success", `sign-in:${value.user.id}`);
       setSession(value);
+      if (driveAutomationEnabled && value?.provider_refresh_token) {
+        const fresh = value;
+        setTimeout(() => {
+          void driveService(fresh, "connect", {
+            refresh_token: fresh.provider_refresh_token,
+          })
+            .then(() => notify("Drive conectado con renovación automática"))
+            .catch(() =>
+              notify(
+                "La autorización renovable de Drive no se pudo guardar. Vuelve a conectar Google cuando el servicio esté disponible.",
+                "error",
+              ),
+            );
+        }, 0);
+      }
       if (event === "PASSWORD_RECOVERY" && value) {
         setRecovering(true);
         void AsyncStorage.setItem(
@@ -178,6 +217,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription?.remove();
     };
   }, []);
+  useEffect(() => {
+    if (accountNotice)
+      notify(
+        accountNotice,
+        /no se pudo|venció|rechazado/i.test(accountNotice) ? "error" : "info",
+      );
+  }, [accountNotice]);
   const finishRecovery = async () => {
     setRecovering(false);
     await AsyncStorage.removeItem(RECOVERY_MARKER).catch(() => {});
@@ -213,7 +259,12 @@ async function googleOAuth(driveAccess: boolean) {
       scopes: driveAccess
         ? "openid email profile https://www.googleapis.com/auth/drive.file"
         : "openid email profile",
-      queryParams: { prompt: driveAccess ? "consent" : "select_account" },
+      queryParams: {
+        prompt: driveAccess ? "consent" : "select_account",
+        ...(driveAccess && driveAutomationEnabled
+          ? { access_type: "offline" }
+          : {}),
+      },
       skipBrowserRedirect: Platform.OS !== "web",
     },
   });

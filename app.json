@@ -35,6 +35,12 @@
         {
           "launchMode": "launcher"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#078292"
+        }
       ]
     ]
   }

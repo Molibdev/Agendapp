@@ -1,3 +1,4 @@
+import { FloatingFeedback } from "./FloatingFeedback";
 import React, { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -164,6 +165,7 @@ export function AccountRecovery() {
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
+      <FloatingFeedback modal active={recovering || !!accountNotice} />
     </Modal>
   );
 }

@@ -1,3 +1,4 @@
+import { FloatingFeedback } from "./FloatingFeedback";
 import React, { useEffect, useRef, useState } from "react";
 import {
   AppState,
@@ -28,6 +29,8 @@ import {
   weekStart,
 } from "../domain/agenda";
 import { CalendarContent, DateField, useCalendar } from "./DateField";
+import { requestAgendaPermission } from "../data/agendaNotifications";
+import { notify } from "../data/feedback";
 import { useTheme } from "./theme";
 
 const dateLabel = (day: string, options: Intl.DateTimeFormatOptions) =>
@@ -134,6 +137,14 @@ export function Agenda({
     }
     setBusy(true);
     try {
+      if (!remove && (draft.remindDayBefore || draft.remindSameDay)) {
+        const granted = await requestAgendaPermission().catch(() => false);
+        if (!granted)
+          notify(
+            "Las preferencias se guardarán, pero este dispositivo no tiene notificaciones de Agenda habilitadas.",
+            "info",
+          );
+      }
       await save(
         remove
           ? { kind: "delete-event", id: draft.id }
@@ -147,6 +158,10 @@ export function Agenda({
       setConfirmDelete(false);
       setMessage(remove ? "Evento eliminado" : "Evento guardado");
     } catch (e) {
+      notify(
+        e instanceof Error ? e.message : "No se pudo guardar el evento",
+        "error",
+      );
       setError(e instanceof Error ? e.message : "No se pudo guardar el evento");
     } finally {
       setBusy(false);
@@ -575,12 +590,10 @@ export function Agenda({
                   {field("Locación", "location", 200)}
                   {field("Descripción", "description", 2000)}
                   <View style={[styles.card, { padding: 16 }]}>
-                    <Text style={styles.cardTitle}>
-                      Recordatorios · próximamente
-                    </Text>
+                    <Text style={styles.cardTitle}>Recordatorios</Text>
                     <Text style={styles.body}>
-                      Puedes guardar estas preferencias. Las notificaciones
-                      móviles aún no se envían.
+                      En Android, avisa a la hora del evento y el día anterior a
+                      esa misma hora. Requiere permitir notificaciones.
                     </Text>
                     {(
                       [
@@ -650,6 +663,10 @@ export function Agenda({
             </KeyboardAvoidingView>
           )
         )}
+        <FloatingFeedback
+          modal
+          active={draft !== null || calendar.request !== null}
+        />
       </Modal>
     </View>
   );

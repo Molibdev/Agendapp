@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import React, { useState, useEffect } from "react";
+import { Pressable, Text, TextInput, View, Switch } from "react-native";
 import { useTheme } from "./theme";
 import { randomUUID } from "expo-crypto";
 import { Command, State } from "../domain/finance";
@@ -11,6 +11,13 @@ import {
   useAuth,
   accountRedirect,
 } from "../data/auth";
+import {
+  driveAutomationEnabled,
+  driveService,
+  resolveDriveToken,
+  subscribeDriveStatus,
+} from "../data/driveAutomation";
+import { notify } from "../data/feedback";
 import { accountEmail, requestAccountEmail } from "../data/accountActions";
 import { listDrive, restoreDrive, uploadDrive } from "../data/cloud";
 type Props = {
@@ -41,6 +48,9 @@ export function Settings({
   const [categoryMessage, setCategoryMessage] = useState("");
   const [forgetConfirmation, setForgetConfirmation] = useState(false);
   const [accountMessage, setAccountMessage] = useState("");
+  useEffect(() => {
+    if (accountMessage) notify(accountMessage, "info");
+  }, [accountMessage]);
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [message, setMessage] = useState(""),
@@ -60,7 +70,12 @@ export function Settings({
     try {
       await action();
       setMessage(success);
+      if (success) notify(success);
     } catch (e) {
+      notify(
+        e instanceof Error ? e.message : "No se pudo completar la operación",
+        "error",
+      );
       setMessage(e instanceof Error ? e.message : "No se pudo completar");
     } finally {
       setBusy(false);
@@ -76,14 +91,41 @@ export function Settings({
       <Text style={styles.buttonText}>{label}</Text>
     </Pressable>
   );
-  const token = () => {
-    const t = session?.provider_token;
-    if (!t)
-      throw new Error(
-        "Conecta Google para permitir acceso a Drive durante esta sesión",
-      );
-    return t;
-  };
+  const [driveStatus, setDriveStatus] = useState<{
+    connected: boolean;
+    automatic_enabled: boolean;
+    last_backup_at: string | null;
+    status: string;
+  } | null>(null);
+  const [driveError, setDriveError] = useState("");
+  useEffect(() => {
+    let live = true;
+    setDriveStatus(null);
+    setDriveError("");
+    const refresh = () => {
+      if (driveAutomationEnabled && session)
+        void driveService(session, "status")
+          .then((status) => {
+            if (live) {
+              setDriveStatus(status);
+              setDriveError("");
+            }
+          })
+          .catch(() => {
+            if (live)
+              setDriveError(
+                "No se pudo consultar el servicio de Drive. Actualiza el estado para reintentar.",
+              );
+          });
+    };
+    refresh();
+    const unsubscribe = subscribeDriveStatus(refresh);
+    return () => {
+      live = false;
+      unsubscribe();
+    };
+  }, [session?.access_token]);
+  const token = () => resolveDriveToken(session);
   const credentials = () => {
     if (!email.trim() || password.length < 8)
       throw new Error(
@@ -100,7 +142,10 @@ export function Settings({
         </Text>
         {button(
           dark ? "Cambiar a modo claro" : "Cambiar a modo nocturno",
-          toggle,
+          () => {
+            toggle();
+            notify(dark ? "Modo claro activado" : "Modo nocturno activado");
+          },
         )}
       </View>
       <View style={styles.card}>
@@ -162,6 +207,12 @@ export function Settings({
               setCategoryName("");
               setCategoryMessage("Categoría guardada");
             } catch (error) {
+              notify(
+                error instanceof Error && error.name !== "ZodError"
+                  ? error.message
+                  : "Introduce un nombre de 1 a 80 caracteres",
+                "error",
+              );
               setCategoryMessage(
                 error instanceof Error && error.name !== "ZodError"
                   ? error.message
@@ -317,7 +368,7 @@ export function Settings({
               conectado.
             </Text>
             {button("Continuar con Google", () => {
-              void run(signInGoogle, "Sesión iniciada con Google");
+              void run(signInGoogle, "");
             })}
             <Text style={styles.muted}>
               Accede con tu cuenta Google o con correo y contraseña. El acceso
@@ -355,7 +406,7 @@ export function Settings({
                         : error.message,
                   );
                 setPassword("");
-              }, "Sesión iniciada");
+              }, "");
             })}
             {button("Crear cuenta", () => {
               void run(async () => {
@@ -427,26 +478,98 @@ export function Settings({
         )}
         <Text style={styles.body}>
           Para subir un Excel, ve a Actividad → Exportar Excel, elige las fechas
-          y pulsa Subir Excel a Drive. Si la autorización caduca, vuelve a
-          conectar Google.
+          y pulsa Subir Excel a Drive.{" "}
+          {driveAutomationEnabled
+            ? "La autorización se renueva automáticamente. Si Google retira el permiso, vuelve a conectar tu cuenta."
+            : "Si la autorización caduca, vuelve a conectar Google."}
         </Text>
+        {driveAutomationEnabled && session && (
+          <View style={[styles.card, { padding: 16 }]}>
+            <Text style={styles.cardTitle}>Respaldo diario automático</Text>
+            {!!driveError && <Text style={styles.error}>{driveError}</Text>}
+            <Text style={styles.body}>
+              Guarda una copia JSON diaria de los últimos datos sincronizados,
+              incluso con la app cerrada. Los cambios que sigan solo en el
+              dispositivo no se incluyen. Las copias ocupan espacio en tu Drive.
+            </Text>
+            <Switch
+              accessibilityLabel="Activar respaldo diario"
+              value={driveStatus?.automatic_enabled ?? false}
+              disabled={busy || !driveStatus?.connected}
+              onValueChange={(enabled) => {
+                void run(
+                  async () => {
+                    await driveService(session, "preferences", { enabled });
+                    setDriveStatus(await driveService(session, "status"));
+                  },
+                  enabled
+                    ? "Respaldo diario activado"
+                    : "Respaldo diario desactivado",
+                );
+              }}
+            />
+            <Text style={styles.muted}>
+              {driveStatus?.last_backup_at
+                ? `Última copia: ${new Date(driveStatus.last_backup_at).toLocaleString()}`
+                : "Todavía no hay un respaldo automático confirmado."}
+            </Text>
+            {driveStatus?.status === "waiting_for_sync" && (
+              <Text style={styles.muted}>
+                Sincroniza tus datos para crear la primera copia.
+              </Text>
+            )}
+            {driveStatus?.status === "backup_failed" && (
+              <Text style={styles.error}>
+                La última copia falló. El servicio volverá a intentarlo; revisa
+                tu conexión y el espacio de Drive.
+              </Text>
+            )}
+            {driveStatus?.status === "reconnect_required" && (
+              <Text style={styles.error}>
+                Google revocó la autorización. Vuelve a conectar Google.
+              </Text>
+            )}
+            {button("Actualizar estado de Drive", () => {
+              void run(async () => {
+                setDriveStatus(await driveService(session, "status"));
+                setDriveError("");
+              }, "");
+            })}
+            {button("Desconectar servicio de Drive", () => {
+              void run(async () => {
+                await driveService(session, "disconnect");
+                setDriveStatus(null);
+              }, "Servicio de Drive desconectado; no se crearán más respaldos automáticos.");
+            })}
+          </View>
+        )}
+        {!driveAutomationEnabled && (
+          <Text style={styles.muted}>
+            La renovación y los respaldos automáticos todavía no están activos
+            en esta instalación.
+          </Text>
+        )}
         {session && (
           <>
             {button("Guardar copia en Drive", () => {
               void run(
-                () => uploadDrive(token(), state),
+                async () => uploadDrive(await token(), state),
                 "Copia guardada en Drive",
               );
             })}
             {button("Ver copias de Drive", () => {
-              void run(async () => setFiles(await listDrive(token())), "");
+              void run(
+                async () => setFiles(await listDrive(await token())),
+                "",
+              );
             })}
             {files.map((f) => (
               <View key={f.id} style={{ gap: 8 }}>
                 <Text style={styles.muted}>{f.name}</Text>
                 {button("Restaurar esta copia", () => {
                   void run(
-                    async () => setPending(await restoreDrive(token(), f.id)),
+                    async () =>
+                      setPending(await restoreDrive(await token(), f.id)),
                     "Revisa la copia y confirma en Copias de seguridad.",
                   );
                 })}
@@ -455,8 +578,9 @@ export function Settings({
           </>
         )}
         <Text style={styles.muted}>
-          Las copias de Drive se realizan cuando las solicitas. No se ejecutan
-          respaldos automáticos con la app cerrada.
+          {driveAutomationEnabled
+            ? "Puedes crear copias manuales además del respaldo diario, si lo activas. Desactivar el respaldo no elimina los archivos ya guardados."
+            : "Las copias de Drive se realizan cuando las solicitas. Activa el servicio de respaldos para disponer de copias con la app cerrada."}
         </Text>
       </View>
       {!!message && messageArea === "general" && (

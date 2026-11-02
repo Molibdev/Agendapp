@@ -109,7 +109,7 @@ Para la función actual de copias en Drive:
 4. Desde Agendapp, conectar Google y autorizar `https://www.googleapis.com/auth/drive.file`.
 5. Guardar, listar y restaurar una copia con confirmación. Probar autorización cancelada y token vencido.
 
-Conectar Google inicia sesión con esa cuenta y puede cambiar el perfil de datos. Se usa el token Google de esa sesión; cuando vence hay que reconectar. Supabase renueva su propia sesión, no el token del proveedor. Las copias son manuales; no hay backups automáticos con la app cerrada. Drive requiere `www.googleapis.com` en la política de red; el navegador debe poder acceder a Google para autorizar la conexión.
+Conectar Google inicia sesión con esa cuenta y puede cambiar el perfil de datos. En el modo manual se usa el token Google de la sesión y hay que reconectar cuando vence. El servicio opcional `drive-service` añade renovación y copias diarias con la app cerrada; requiere su despliegue, secretos, Cron y activación voluntaria: ver [recordatorios y respaldos](alerts-and-backups.md). Drive requiere `www.googleapis.com` en la política de red; la renovación del servidor utiliza también `oauth2.googleapis.com`. El navegador debe poder acceder a Google para autorizar la conexión.
 
 ## 6. Subir Excel directamente a Google Drive
 
@@ -124,7 +124,7 @@ Si el login Google ya funciona, reutilizar ese mismo proyecto y cliente OAuth:
 5. Actualizar Agendapp y pulsar **Ajustes → Conectar Google**. Volver a conceder consentimiento, incluido el acceso a archivos creados o abiertos con la app. Una sesión anterior sin esos permisos no basta. Conectar una cuenta diferente puede cambiar el perfil activo; verificar sus datos antes de exportar.
 6. Exportar un intervalo corto, pulsar **Subir Excel a Drive** y esperar **Guardado en Drive: Agendapp\_...xlsx**. Buscar ese nombre en Mi unidad de la cuenta autorizada, abrirlo y comprobar los importes.
 
-La app pide renovar consentimiento al reconectar. No almacena un refresh token de Google ni mantiene una autorización permanente: si el token vence o desaparece al renovar la sesión Supabase, reconectar desde Ajustes. No se suben informes automáticamente; la acción siempre es del usuario. El éxito solo se muestra cuando Google devuelve un ID de archivo. Después de un corte de red, revisar Drive antes de reintentar porque la subida podría haber llegado y el reintento crearía otra copia.
+La app pide consentimiento al conectar Drive. Con el servicio automático activado, solicita acceso offline y guarda el permiso renovable cifrado en el servidor; sin ese servicio, el token corto depende de la sesión Google y puede requerir reconectar. Una revocación de Google siempre requiere nueva autorización. Los informes Excel se suben por acción del usuario; el respaldo diario opcional guarda JSON. El éxito solo se muestra cuando Google devuelve un ID de archivo. Después de un corte de red, revisar Drive antes de reintentar porque la subida podría haber llegado y el reintento crearía otra copia.
 
 El asistente puede implementar y probar el envío con transporte simulado. Habilitar la API y el consentimiento reales exige acceso al proyecto Google Cloud. Una compilación de desarrollo permite validar correctamente el flujo OAuth en móvil; no basta generar un bundle para afirmar que la subida real fue probada.
 

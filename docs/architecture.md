@@ -30,11 +30,11 @@ El cliente sincroniza instantáneas completas en `finance_snapshots`, con RLS po
 
 ## Drive y configuración pendiente
 
-Se usa el token de proveedor de Google de la sesión para llamadas REST a Drive con alcance `drive.file`. Permite guardar copias JSON, listar las últimas 20 creadas por Qgasto y restaurarlas con confirmación. Conectar Google inicia sesión con esa cuenta y puede cambiar de perfil. Si el token Google caduca, hay que reconectar (Supabase renueva su sesión, no ese token).
+Las llamadas REST a Drive usan `drive.file`. Permiten guardar copias JSON, listar las últimas 20 creadas por Agendapp y restaurarlas con confirmación. Conectar Google inicia sesión con esa cuenta y puede cambiar de perfil. Sin el servicio automático se usa el token del proveedor de la sesión; con el servicio activado se obtiene un token nuevo desde `drive-service`.
 
-Los respaldos en Drive son manuales. Automatizar con la aplicación cerrada requiere un flujo OAuth offline separado, refresh tokens cifrados en servidor, revocación, Edge Functions y Cron con jobs idempotentes; esa automatización no forma parte del código actual.
+El servicio opcional `drive-service` guarda refresh tokens con AES-GCM ligado al UID y renueva los access tokens. Valida el JWT con Auth `/user`; el cron usa un secreto independiente almacenado en Vault. Las tablas separan metadatos visibles de credenciales inaccesibles al cliente. Un cron horario procesa conexiones habilitadas y respalda el último snapshot a intervalos diarios, incluso con el teléfono apagado. Reserva el ID de Drive antes de subir y conserva un registro por usuario/día UTC para reintentos sin duplicados. Requiere despliegue y activación: [guía](alerts-and-backups.md). Los Excel siguen siendo manuales.
 
-El usuario aún no tiene proyectos Supabase/Google. Se incluye [guía de activación](cloud-setup.md) y `.env.example`. No se han aplicado migraciones, probado RLS contra un servidor real ni completado OAuth real. No se considera validada una integración remota solo por pasar las pruebas locales.
+Se incluyen [guía de conexión](cloud-setup.md), `.env.example` y una [guía de activación del servicio nuevo](alerts-and-backups.md). El usuario confirmó los flujos existentes de autenticación, sincronización, Drive y aislamiento; el nuevo servicio de respaldo requiere despliegue y validación reales adicionales. Las pruebas locales no sustituyen esa comprobación.
 
 ## Validación y pendientes
 
@@ -66,8 +66,12 @@ La migración `202611010003_account_details.sql` añade los metadatos a la tabla
 
 `src/domain/agenda.ts` valida título, inicio/fin, locación, descripción y dos preferencias booleanas de recordatorio. Las operaciones `event`, `update-event` y `delete-event` se persisten con el mismo flujo serializado de `useFinance`, por perfil. No generan movimientos financieros. La eliminación requiere confirmación en la interfaz. El campo `events` del estado se inicializa a `[]` para datos y copias de versiones anteriores. Los eventos y recordatorios se incluyen en JSON, Drive y snapshots Supabase; Excel continúa siendo un informe financiero. Mantener todos los clientes actualizados evita que una versión anterior omita los campos nuevos al sincronizar.
 
-Los horarios se guardan como fecha/hora local (`YYYY-MM-DDTHH:mm`), sin conversión UTC, y se muestran usando el reloj y la zona horaria del dispositivo. Cambiar de zona conserva la hora local indicada en el evento. No se integra con el calendario del sistema ni se implementan zonas horarias por evento. El reloj se refresca cada minuto y al volver al primer plano. Los recordatorios solo almacenan preferencias: no se solicitan permisos, no se registran tareas y no se programan notificaciones.
+Los horarios se guardan como fecha/hora local (`YYYY-MM-DDTHH:mm`), sin conversión UTC, y se muestran usando el reloj y la zona horaria del dispositivo. Cambiar de zona conserva la hora local indicada en el evento. No se integra con el calendario del sistema ni se implementan zonas horarias por evento. El reloj se refresca cada minuto y al volver al primer plano. `AgendaNotifications` reconcilia las preferencias con `expo-notifications` en Android. Solicita permiso al guardar un evento con recordatorios, programa el día anterior a la misma hora y/o el inicio, y cancela solicitudes obsoletas al editar/eliminar/cambiar de perfil. Recalcula al volver al primer plano. El navegador conserva preferencias. La entrega nativa requiere una nueva compilación y está sujeta a las restricciones de Android.
 
 Ajustes está en el encabezado, con transición de 180 ms entre engranaje y X y soporte de movimiento reducido. La X vuelve a Inicio; Agenda ocupa su lugar en las cinco opciones inferiores. Se reinicia el desplazamiento al cambiar de sección.
 
 `tests/agenda.test.ts` prueba validación, CRUD, superposiciones, medianoche, meses cortos, semanas, horario local/DST, migración de respaldos y transporte de sincronización simulado. `scripts/smoke-agenda.mjs` prueba los flujos reales de navegador con reloj y zona local controlados, persistencia, respaldos y ambos temas. Las exportaciones nativas validan los bundles, pero no sustituyen las pruebas en un teléfono físico.
+
+## Avisos dentro de la app
+
+`feedback.ts` mantiene una cola compartida y elige el host visible entre la pantalla y los modales. Los cambios persistidos, la sincronización y las acciones de cuenta/Drive emiten avisos; no se muestran éxitos antes de guardar. `FloatingFeedback` usa el tema actual, aparece sobre la navegación inferior, permite cerrar el mensaje y respeta reducir movimiento. Los avisos de sincronización repetidos se deduplican.

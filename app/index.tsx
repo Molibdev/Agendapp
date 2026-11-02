@@ -1,3 +1,4 @@
+import { FloatingFeedback } from "../src/components/FloatingFeedback";
 import React, { useState, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
@@ -43,9 +44,15 @@ import {
 import { useTheme } from "../src/components/theme";
 import { Settings } from "../src/components/Settings";
 import { SettingsToggle } from "../src/components/SettingsToggle";
+import { AgendaNotifications } from "../src/components/AgendaNotifications";
+import { notify } from "../src/data/feedback";
 import { Agenda } from "../src/components/Agenda";
 import { useAuth } from "../src/data/auth";
 import { exportExcel } from "../src/data/export";
+import {
+  driveAutomationEnabled,
+  resolveDriveToken,
+} from "../src/data/driveAutomation";
 import { uploadExcelDrive } from "../src/data/drive";
 
 type Tab = "Inicio" | "Actividad" | "Cuentas" | "Planes" | "Ajustes" | "Agenda";
@@ -322,12 +329,19 @@ export default function Home() {
     setBusy(true);
     setMessage("");
     try {
-      const token = session?.provider_token;
+      const token = await resolveDriveToken(session);
       if (!token)
         throw new Error("Conecta Google desde Ajustes para autorizar Drive.");
       const result = await uploadExcelDrive(token, s, date, to);
       setDriveExport({ name: result.name, range: `${date}:${to}` });
+      notify("Excel guardado en Google Drive");
     } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : "No se pudo subir el Excel a Drive",
+        "error",
+      );
       setMessage(
         error instanceof Error
           ? error.message
@@ -343,6 +357,7 @@ export default function Home() {
     try {
       if (form === "export") {
         await exportExcel(s, date, to);
+        notify("Excel generado");
         setForm(null);
         return;
       }
@@ -449,6 +464,12 @@ export default function Home() {
           break;
       }
     } catch (e) {
+      notify(
+        e instanceof Error && e.name !== "ZodError"
+          ? e.message
+          : "Revisa los campos antes de guardar.",
+        "error",
+      );
       setMessage(
         e instanceof Error
           ? e.name === "ZodError"
@@ -545,6 +566,10 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar style={dark ? "light" : "dark"} />
+      <AgendaNotifications
+        events={s.events}
+        owner={session?.user.id ?? "guest"}
+      />
       <View style={styles.shell}>
         <View style={[styles.header, { paddingVertical: 8 }]}>
           <View>
@@ -1342,7 +1367,8 @@ export default function Home() {
                       nuevo; el Excel es un informe y no sirve para restaurar
                       datos.
                     </Text>
-                    {!session?.provider_token && (
+                    {(!session ||
+                      (!driveAutomationEnabled && !session.provider_token)) && (
                       <Text style={styles.muted}>
                         Conecta Google desde Ajustes para habilitar esta opción.
                       </Text>
@@ -1352,7 +1378,8 @@ export default function Home() {
                       disabled={
                         busy ||
                         saving ||
-                        !session?.provider_token ||
+                        !session ||
+                        (!driveAutomationEnabled && !session.provider_token) ||
                         driveExport?.range === `${date}:${to}`
                       }
                       onPress={() => {
@@ -1385,6 +1412,12 @@ export default function Home() {
             </View>
           </KeyboardAvoidingView>
         ) : null}
+        <FloatingFeedback
+          modal
+          active={
+            form !== null || (calendar.request !== null && tab !== "Agenda")
+          }
+        />
       </Modal>
     </SafeAreaView>
   );
