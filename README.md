@@ -54,4 +54,6 @@ Las pruebas cubren reglas financieras, edición de movimientos, categorías, des
 
 Más detalles: [arquitectura](docs/architecture.md). La especificación adjunta original contiene tres páginas de resumen y referencia una especificación extensa y un Excel no adjuntados.
 
-La marca visible es Agendapp. Se mantienen el esquema de enlace `qgasto`, el slug y las claves internas de almacenamiento, respaldo y Drive para conservar datos, sesiones, enlaces y copias anteriores. Los iconos reproducen en vector el símbolo del logo proporcionado. Los iconos y el nombre nativo requieren una nueva compilación de la app instalada.
+La marca visible es Agendapp. El paquete npm y el slug de Expo usan `agendapp`. Se admiten los enlaces `agendapp://` y `qgasto://`; se mantienen las claves internas de almacenamiento, respaldo y Drive para conservar datos, sesiones, enlaces y copias anteriores. Los iconos reproducen en vector el símbolo del logo proporcionado. Los iconos y el nombre nativo requieren una nueva compilación de la app instalada.
+
+El repositorio sigue en `Molibdev/Qgasto` hasta que su propietario lo renombre a `Agendapp` en GitHub → Settings → General → Repository name. Después, los checkouts existentes pueden actualizar su remoto con `git remote set-url origin https://github.com/Molibdev/Agendapp.git`.

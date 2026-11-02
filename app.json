@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Agendapp",
-    "slug": "qgasto",
+    "slug": "agendapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -23,7 +23,10 @@
       "output": "static",
       "favicon": "./assets/favicon.png"
     },
-    "scheme": "qgasto",
+    "scheme": [
+      "agendapp",
+      "qgasto"
+    ],
     "plugins": [
       "expo-router",
       "expo-sharing",
