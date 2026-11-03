@@ -4,9 +4,9 @@ Esta etapa prepara una app Android propia con `expo-dev-client`. No publica en G
 
 ## Estado y requisitos
 
-- Cuenta Expo indicada: **Molibdev**. El nombre por sí solo no autentica a EAS.
+- Propietario Expo: **molibdev**. El nombre por sí solo no autentica a EAS.
 - La configuración de código incluye el cliente de desarrollo, perfil de compilación e iconos.
-- La vinculación requiere obtener el ID real del proyecto EAS con `eas init`. No inventar `extra.eas.projectId` ni copiar el de otra app.
+- Proyecto EAS vinculado y versionado: `d9ef7a8d-49d9-4544-8a72-f8336338eb35`. Se conserva el proyecto existente de Agendapp; no es necesario volver a ejecutar `eas init`.
 - Hace falta un teléfono Android, conexión a Internet y permiso para instalar el APK descargado.
 - EAS puede usar la cuota gratuita disponible; pueden aplicarse colas y límites del plan. No seleccionar servicios pagados por defecto.
 
@@ -15,8 +15,8 @@ Esta etapa prepara una app Android propia con `expo-dev-client`. No publica en G
 En PowerShell, dentro del repositorio y con Expo detenido:
 
 ```powershell
-git switch feat/qgasto-agenda
-git pull origin feat/qgasto-agenda
+git switch feat/agendapp-ux-redesign
+git pull origin feat/agendapp-ux-redesign
 npm ci
 npx eas-cli@27.2.0 login
 npx eas-cli@27.2.0 whoami
@@ -24,13 +24,7 @@ npx eas-cli@27.2.0 whoami
 
 El login abre el navegador. Iniciar sesión con la cuenta Expo correcta; `whoami` debe mostrar esa cuenta. No es la cuenta de Supabase ni la de Google Cloud. No compartir contraseñas ni tokens en chat.
 
-Después:
-
-```powershell
-npx eas-cli@27.2.0 init --account Molibdev
-```
-
-Crear/vincular **Agendapp** con slug `agendapp` en esa cuenta. Si aparece un proyecto existente, comprobar que sea el correcto antes de vincularlo. El comando registra `extra.eas.projectId` en `app.json` y puede añadir `owner`; ambos son identificadores públicos. Conservar y versionar esa modificación para futuros builds. Esta guía no afirma que la vinculación ya se haya hecho.
+`app.json` ya incluye el propietario `molibdev`, el ID público real del proyecto y los plugins de esta rama. La sesión de EAS debe tener acceso a ese proyecto. Si al actualizar quedó un conflicto de Git, resolverlo antes de compilar; ver [recuperación del archivo](design-system.md#si-quedó-un-conflicto-al-recuperar-un-stash). No crear otro proyecto ni sustituir la vinculación existente.
 
 ## 2. Configuración local de Supabase
 

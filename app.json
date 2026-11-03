@@ -46,6 +46,17 @@
         }
       ],
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "d9ef7a8d-49d9-4544-8a72-f8336338eb35"
+      }
+    },
+    "owner": "molibdev"
   }
 }

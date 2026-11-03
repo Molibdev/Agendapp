@@ -61,7 +61,7 @@ El repositorio está en `Molibdev/Agendapp`. Los checkouts que conserven el remo
 
 ## Android: compilación de desarrollo
 
-Ver [guía Android](docs/android-development.md). El proyecto incluye `expo-dev-client` y el perfil EAS `development`, que genera un APK para instalar en el teléfono. Se requiere una cuenta Expo y vincular el proyecto con `eas init`; no hay un APK generado ni un proyecto EAS vinculado hasta completar esos pasos. Después de instalar, iniciar Metro con `npm run start:dev` y abrir la app Agendapp instalada. El retorno de Google en Android es `agendapp:///`, registrado en las Redirect URLs de Supabase.
+Ver [guía Android](docs/android-development.md). El proyecto incluye `expo-dev-client` y el perfil EAS `development`, que genera un APK para instalar en el teléfono. La vinculación EAS del proyecto existente ya está versionada bajo `molibdev`. Se requiere iniciar sesión con una cuenta que tenga acceso y generar el APK de esta rama; no es necesario volver a ejecutar `eas init`. Después de instalar, iniciar Metro con `npm run start:dev` y abrir la app Agendapp instalada. El retorno de Google en Android es `agendapp:///`, registrado en las Redirect URLs de Supabase.
 
 La validación de aislamiento entre usuarios se describe en [esta guía](docs/user-isolation-testing.md), con un control local de la clave pública y una prueba RLS reversible para ejecutar en el proyecto real.
 

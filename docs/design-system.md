@@ -40,7 +40,7 @@ Las capturas de referencia también muestran funciones bancarias y cuotas que no
 
 ## Probar en tu teléfono Android
 
-1. Descarga la rama y ejecuta `npm ci`. Si Git avisa de cambios locales en `app.json`, conserva la vinculación EAS (`owner`/`extra.eas.projectId`) al combinarla con los plugins de esta rama, incluido `expo-font`.
+1. Descarga la rama y ejecuta `npm ci`. La vinculación EAS de Agendapp ya está versionada (`owner: molibdev`, proyecto `d9ef7a8d-49d9-4544-8a72-f8336338eb35`) junto al plugin `expo-font`; no hace falta ejecutar `eas init` otra vez.
 2. Conserva tu `.env.local` UTF-8 con las claves públicas Supabase y `EXPO_PUBLIC_DRIVE_AUTOMATION_ENABLED=true`, ya configuradas. No subas ese archivo.
 3. Genera un nuevo cliente de desarrollo: `npm run build:android:dev`. Se agregaron `react-native-svg` y `expo-font`, por lo que el APK anterior puede no tener los módulos nativos necesarios. No es una publicación en Google Play.
 4. Instala el APK como actualización de Agendapp y ejecuta `npm run start:dev -- --clear` para cargar esta rama.
@@ -56,3 +56,16 @@ Las capturas de referencia también muestran funciones bancarias y cuotas que no
 - `npm run test:ssr` y exportación Android: empaquetado con configuración Supabase y módulos nuevos.
 
 Para las pruebas de navegador locales, sirve `dist` en el puerto 8081 y utiliza Chromium. No se modifican usuarios, archivos ni datos de los servicios reales durante esas pruebas.
+
+## Si quedó un conflicto al recuperar un stash
+
+Las marcas `<<<<<<<`, `=======` y `>>>>>>>` dentro de `app.json` impiden que Expo lea el archivo. La rama ya combina los plugins del rediseño con la vinculación EAS proporcionada por el propietario. Si el único conflicto pendiente es ese archivo, desde esta rama en PowerShell:
+
+```powershell
+Copy-Item .\app.json "$env:TEMP\Agendapp-app-json-conflicto.bak"
+git restore --source=HEAD --staged --worktree -- app.json
+git pull --ff-only origin feat/agendapp-ux-redesign
+npx expo config --type public
+```
+
+Ejecutar uno por uno y detenerse si alguno falla. La primera instrucción conserva una copia del archivo conflictivo fuera del repositorio; la segunda elimina el conflicto de ese archivo y la actualización trae su configuración ya combinada. `.env.local` y las autorizaciones de `package.json` no se modifican. Una vez que Expo muestre la configuración sin errores, ejecutar `npm run build:android:dev`. El stash original permanece disponible. `cli.appVersionSource` se fija en `local` para usar la versión de `app.json` en esta etapa de desarrollo.
