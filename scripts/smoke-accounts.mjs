@@ -135,6 +135,8 @@ try {
     if (url.pathname === "/functions/v1/drive-service") {
       assert.equal(request.headers().authorization, `Bearer ${jwt}`);
       if (body.action === "status") return json(200, drive);
+      if (body.action === "token")
+        return json(200, { access_token: "drive-browser-fixture" });
       if (body.action === "preferences") {
         assert.equal(typeof body.enabled, "boolean");
         drive.automatic_enabled = body.enabled;
@@ -197,17 +199,47 @@ try {
     }
     throw new Error("Unexpected mocked endpoint: " + url.pathname);
   });
+  await page.route("https://www.googleapis.com/**", async (route) => {
+    const request = route.request(),
+      url = new URL(request.url());
+    assert.equal(
+      request.headers().authorization,
+      "Bearer drive-browser-fixture",
+    );
+    if (url.pathname === "/drive/v3/files")
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          files: [{ id: "backup-fixture", name: "Agendapp-auto-fixture.json" }],
+        }),
+      });
+    if (
+      url.pathname === "/drive/v3/files/backup-fixture" &&
+      url.searchParams.get("alt") === "media"
+    )
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: readFileSync("examples/qgasto-datos-prueba.json", "utf8"),
+      });
+    throw new Error("Unexpected Drive fixture endpoint: " + url.pathname);
+  });
   const button = (name) => page.getByRole("button", { name, exact: true });
   const field = (name) => page.getByRole("textbox", { name, exact: true });
-  const settings = async () => {
+  const profile = async () => {
     await page
-      .getByRole("button", { name: /^(Abrir|Cerrar) ajustes$/ })
+      .getByRole("button", { name: /^(Abrir|Cerrar) perfil$/ })
       .waitFor();
+    if (await button("Abrir perfil").count())
+      await button("Abrir perfil").click();
+  };
+  const settings = async () => {
     if (await button("Abrir ajustes").count())
       await button("Abrir ajustes").click();
   };
   await page.goto(origin);
-  await settings();
+  await profile();
   await button("Olvidé mi contraseña").click();
   await expect(
     page.getByText("Introduce un correo electrónico válido.", { exact: true }),
@@ -240,7 +272,7 @@ try {
   await button("Entendido").click();
   assert.equal(updated, "new-password-123");
   await page.reload();
-  await settings();
+  await profile();
   await expect(button("Cerrar sesión")).toBeVisible();
   const daily = page.getByRole("switch", {
     name: "Activar respaldo diario",
@@ -259,6 +291,28 @@ try {
   await daily.click();
   await expect(daily).not.toBeChecked();
   assert.equal(drive.automatic_enabled, false);
+  await button("Ver copias de Drive").click();
+  await button("Restaurar esta copia").click();
+  await expect(
+    page.getByText("Restaurar copia de Drive", { exact: true }),
+  ).toBeVisible();
+  await expect(button("Confirmar restauración")).toBeVisible();
+  await button("Cancelar restauración").click();
+  await expect(button("Confirmar restauración")).toHaveCount(0);
+  await expect(
+    page.getByText(
+      "Revisa los datos y confirma la restauración debajo de Google Drive.",
+      { exact: true },
+    ),
+  ).toHaveCount(0);
+  await page.screenshot({
+    path: join(tmpdir(), "agendapp-redesign-profile-connected.png"),
+  });
+  await settings();
+  await expect(
+    page.getByText("Cuenta y sincronización", { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByText("Google Drive", { exact: true })).toHaveCount(0);
   await field("Nombre de categoría").fill("Cuenta de prueba");
   await button("Agregar categoría").click();
   await expect(
@@ -272,21 +326,24 @@ try {
     return value;
   }, key);
   assert.ok(sentinel);
+  await profile();
   await button("Cerrar sesión").click();
   await expect(button("Entendido")).toBeVisible();
   await button("Entendido").click();
   assert.ok(await page.evaluate((k) => localStorage.getItem(k), key));
-  await settings();
+  await profile();
   await field("Correo electrónico").fill(user.email);
   await field("Contraseña").fill("new-password-123");
   await button("Iniciar sesión").click();
   await expect(button("Cerrar sesión")).toBeVisible();
   blockSync = true;
+  await settings();
   await field("Nombre de categoría").fill("Pendiente");
   await button("Agregar categoría").click();
   await expect(
     page.getByText("Categoría guardada", { exact: true }),
   ).toBeVisible();
+  await profile();
   await button("Cerrar sesión y borrar copia local").click();
   await button("Confirmar cierre y borrado local").click();
   await expect(
@@ -313,7 +370,7 @@ try {
     "other-profile",
   );
   assert.equal(logoutCalls, 2);
-  await settings();
+  await profile();
   await field("Correo electrónico").fill(user.email);
   confirmationRedirect = "";
   await button("Reenviar confirmación").click();
@@ -321,7 +378,7 @@ try {
   const confirmed = new URL(confirmationRedirect);
   confirmed.searchParams.set("code", "confirmation-code");
   await page.goto(confirmed.href);
-  await settings();
+  await profile();
   await expect(button("Cerrar sesión")).toBeVisible();
   await expect(field("Nueva contraseña")).toHaveCount(0);
   await page.goto(origin + "/?error=access_denied&error_code=otp_expired");
@@ -332,7 +389,7 @@ try {
     ),
   ).toBeVisible();
   await button("Entendido").click();
-  await settings();
+  await profile();
   await expect(button("Cerrar sesión")).toBeVisible();
   assert.deepEqual(errors, []);
   console.log(

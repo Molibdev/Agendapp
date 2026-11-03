@@ -1,6 +1,6 @@
 # Agendapp
 
-Tus planes. Tus cuentas. Tu ritmo. Agenda personal y finanzas en español y CLP: cuentas, ingresos, gastos, presupuestos, metas de ahorro y gastos recurrentes. Interfaz adaptable con modo claro/nocturno y almacenamiento local persistente.
+Agenda personal y finanzas en español y CLP: cuentas, ingresos, gastos, presupuestos, metas de ahorro y gastos recurrentes. Interfaz adaptable con modo claro/nocturno y almacenamiento local persistente.
 
 ## Ejecutar
 
@@ -28,7 +28,7 @@ Stack: Expo 58, React Native 0.88, React 19.3, Expo Router, TypeScript, TanStack
 - Recordatorios locales de Agenda en Android, un día antes a la misma hora y/o al comenzar el evento. Se reprograman al editar y se cancelan al eliminar o cambiar de perfil. Requieren una nueva compilación Android y permiso de notificaciones.
 - Avisos flotantes para cambios guardados, sincronización, exportaciones y errores; cola compartida entre pantallas y editores, colores según el tema y cierre accesible.
 - Ajustes desde el icono del encabezado: transición suave entre engranaje y X; la X vuelve a Inicio. Respeta la preferencia del sistema de reducir movimiento.
-- Ajustes: modo claro/nocturno persistido, cuenta, sincronización, respaldos y categorías de gasto personalizadas. Se pueden agregar y renombrar sin perder referencias del historial.
+- Ajustes: apariencia, copias locales y categorías de gasto personalizadas. Perfil, desde el icono de usuario junto al engranaje: cuenta, sincronización y Google Drive, con paneles compactos y confirmación de restauración propia.
 - Calendario móvil desplazable, adaptado al alto disponible, con selección y día actual destacados. Colores y contornos con mayor contraste en ambos temas.
 - **Copia JSON descargable y restaurable** con todos los datos financieros, incluidos recurrentes y eventos de agenda. Formato versionado, validación y confirmación antes de reemplazar el perfil actual. Sin contraseñas ni sesiones. Límite de importación de 10 MB. Guarda el archivo fuera de la app para recuperarlo después de reinstalar.
 - Excel para análisis: descargar/compartir o subir directamente a Google Drive desde Actividad → Exportar Excel. Requiere conectar Google y habilitar Drive API para subir; no se usa como formato de restauración.
@@ -57,10 +57,12 @@ Más detalles: [arquitectura](docs/architecture.md). La especificación adjunta 
 
 La marca visible es Agendapp. El paquete npm y el slug de Expo usan `agendapp`. Se admiten los enlaces `agendapp://` y `qgasto://`; se mantienen las claves internas de almacenamiento, respaldo y Drive para conservar datos, sesiones, enlaces y copias anteriores. Los iconos reproducen en vector el símbolo del logo proporcionado. Los iconos y el nombre nativo requieren una nueva compilación de la app instalada.
 
-El repositorio sigue en `Molibdev/Qgasto` hasta que su propietario lo renombre a `Agendapp` en GitHub → Settings → General → Repository name. Después, los checkouts existentes pueden actualizar su remoto con `git remote set-url origin https://github.com/Molibdev/Agendapp.git`.
+El repositorio está en `Molibdev/Agendapp`. Los checkouts que conserven el remoto anterior pueden actualizarlo con `git remote set-url origin https://github.com/Molibdev/Agendapp.git`.
 
 ## Android: compilación de desarrollo
 
 Ver [guía Android](docs/android-development.md). El proyecto incluye `expo-dev-client` y el perfil EAS `development`, que genera un APK para instalar en el teléfono. Se requiere una cuenta Expo y vincular el proyecto con `eas init`; no hay un APK generado ni un proyecto EAS vinculado hasta completar esos pasos. Después de instalar, iniciar Metro con `npm run start:dev` y abrir la app Agendapp instalada. El retorno de Google en Android es `agendapp:///`, registrado en las Redirect URLs de Supabase.
 
 La validación de aislamiento entre usuarios se describe en [esta guía](docs/user-isolation-testing.md), con un control local de la clave pública y una prueba RLS reversible para ejecutar en el proyecto real.
+
+El rediseño usa Inter, iconos Lucide, gráficos SVG y temas violeta claro/oscuro. Ver [sistema visual y prueba Android](docs/design-system.md). Para comprobar búsqueda, filtros, navegación de Perfil y diseños de 320 a 1280 px: `npm run test:design:web`, con el export web servido en el puerto 8081.

@@ -69,7 +69,7 @@ EXPO_PUBLIC_DRIVE_AUTOMATION_ENABLED=true
 
 Reinicia Metro con caché limpia; si distribuyes una compilación con JavaScript incorporado, incluye esta variable pública al compilar. No modifiques las claves Supabase que ya funcionan ni pongas secretos en `.env.example`.
 
-En Ajustes → Google Drive pulsa **Conectar Google** otra vez. Esta vez se solicita autorización offline con consentimiento y se envía el permiso renovable al servidor, donde se cifra. El cliente mantiene la sesión de Supabase, pero deja de persistir el refresh token de Google. La autorización renovable queda disponible para los dispositivos de la misma cuenta; cada operación obtiene un access token nuevo. Ya no depende del access token corto que trajo el login inicial.
+En Perfil → Google Drive pulsa **Conectar Google** otra vez. Esta vez se solicita autorización offline con consentimiento y se envía el permiso renovable al servidor, donde se cifra. El cliente mantiene la sesión de Supabase, pero deja de persistir el refresh token de Google. La autorización renovable queda disponible para los dispositivos de la misma cuenta; cada operación obtiene un access token nuevo. Ya no depende del access token corto que trajo el login inicial.
 
 Activa **Respaldo diario** voluntariamente. La primera copia se hará en la siguiente revisión del cron; el interruptor viene apagado para cada conexión nueva. «Actualizar estado de Drive» muestra la última copia confirmada. Desactivarlo detiene los siguientes respaldos; no borra archivos existentes. «Desconectar servicio de Drive» elimina el permiso guardado en Supabase sin cerrar tu sesión ni borrar datos. Una operación ya enviada a Google podría terminar durante una desconexión.
 

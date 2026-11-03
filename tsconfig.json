@@ -4,5 +4,7 @@
     "strict": true,
     "types": ["react", "node"],
     "allowImportingTsExtensions": true
-  }
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist", "web-build", "android", "ios"]
 }

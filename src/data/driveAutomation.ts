@@ -48,6 +48,6 @@ export async function resolveDriveToken(
   if (driveAutomationEnabled)
     return (await driveService(session, "token")).access_token;
   if (!session?.provider_token)
-    throw new Error("Conecta Google desde Ajustes para autorizar Drive.");
+    throw new Error("Conecta Google desde Perfil para autorizar Drive.");
   return session.provider_token;
 }

@@ -13,6 +13,7 @@ import {
   registerFeedbackHost,
   dismissFeedback,
 } from "../data/feedback";
+import { AppIcon } from "./AppIcon";
 import { useTheme } from "./theme";
 export function FloatingFeedback({
   active = true,
@@ -78,7 +79,8 @@ export function FloatingFeedback({
             maxWidth: 540,
             width: "100%",
             padding: 14,
-            borderWidth: 2,
+            borderWidth: 1,
+            borderRadius: 18,
             borderColor:
               current.kind === "error" ? styles.error.color : styles.link.color,
             flexDirection: "row",
@@ -104,7 +106,7 @@ export function FloatingFeedback({
             justifyContent: "center",
           }}
         >
-          <Text style={styles.cardTitle}>×</Text>
+          <AppIcon name="close" size={18} />
         </Pressable>
       </Animated.View>
     </View>

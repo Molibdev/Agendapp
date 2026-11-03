@@ -9,7 +9,7 @@ export async function driveRequest(
 ) {
   if (!token.trim())
     throw new Error(
-      "Conecta Google desde Ajustes para autorizar el acceso a Drive.",
+      "Conecta Google desde Perfil para autorizar el acceso a Drive.",
     );
   const response = await request(url, {
     ...init,
@@ -18,7 +18,7 @@ export async function driveRequest(
   if (!response.ok) {
     if (response.status === 401)
       throw new Error(
-        "La autorización de Google venció. Vuelve a conectar Google desde Ajustes e inténtalo de nuevo.",
+        "La autorización de Google venció. Vuelve a conectar Google desde Perfil e inténtalo de nuevo.",
       );
     if (response.status === 403) {
       let disabled = false;

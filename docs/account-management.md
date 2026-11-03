@@ -8,7 +8,7 @@ No se han cambiado tablas, contraseñas, usuarios ni proveedores del proyecto re
 
 ## Correo y recuperación
 
-En Ajustes → Cuenta y sincronización, sin sesión:
+En Perfil → Cuenta y sincronización, sin sesión:
 
 - Correo y contraseña permiten entrar o crear una cuenta.
 - **Olvidé mi contraseña** usa el correo escrito, sin exigir una contraseña, y solicita `resetPasswordForEmail`.

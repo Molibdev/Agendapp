@@ -9,9 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { AppIcon } from "./AppIcon";
 import { useTheme } from "./theme";
 import { dateSchema, today } from "../domain/finance";
 type Request = {
+  compact?: boolean;
   label: string;
   value: string;
   onChange: (v: string) => void;
@@ -37,7 +39,13 @@ export const useCalendar = () => useContext(CalendarContext);
 export function DateField(props: Request) {
   const { styles } = useTheme(),
     calendar = useCalendar();
-  const { value, label, monthOnly = false, dayOnly = false } = props;
+  const {
+    value,
+    label,
+    monthOnly = false,
+    dayOnly = false,
+    compact = false,
+  } = props;
   const months = [
     "Enero",
     "Febrero",
@@ -61,15 +69,36 @@ export function DateField(props: Request) {
         : "Seleccionar fecha";
   return (
     <View style={{ gap: 7 }}>
-      <Text style={styles.label}>{label}</Text>
+      {!compact && <Text style={styles.label}>{label}</Text>}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
         onPress={() => calendar.show(props)}
-        style={styles.input}
+        style={[
+          styles.input,
+          { flexDirection: "row", alignItems: "center", gap: 8 },
+          compact && {
+            minHeight: 44,
+            paddingVertical: 9,
+            paddingHorizontal: 12,
+            borderRadius: 14,
+          },
+        ]}
       >
-        <Text style={{ color: styles.input.color, fontSize: 16 }}>
-          ▦ {formatted}
+        <AppIcon
+          name="calendar"
+          size={compact ? 15 : 17}
+          color={styles.link.color}
+        />
+        <Text
+          style={[
+            styles.body,
+            { color: styles.input.color, fontSize: compact ? 12 : 15 },
+          ]}
+        >
+          {compact && monthOnly
+            ? `${months[Number(value.slice(5, 7)) - 1]?.slice(0, 3)} ${value.slice(0, 4)}`
+            : formatted}
         </Text>
       </Pressable>
     </View>

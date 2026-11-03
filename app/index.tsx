@@ -9,11 +9,11 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
   KeyboardAvoidingView,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -23,15 +23,9 @@ import {
   Account,
   Command,
   Transaction,
-  balance,
-  bankTotal,
-  creditSummary,
-  accountTypeLabel,
-  monthLabel,
   clp,
   contributed,
   monthly,
-  expensesByAccountType,
   possibleDuplicate,
   spent,
   today,
@@ -43,6 +37,11 @@ import {
 } from "../src/components/DateField";
 import { useTheme } from "../src/components/theme";
 import { Settings } from "../src/components/Settings";
+import { AppIcon } from "../src/components/AppIcon";
+import { CategoryTag } from "../src/components/CategoryTag";
+import { AccountCard } from "../src/components/AccountCard";
+import { Overview } from "../src/components/Overview";
+import { CategoryBreakdown } from "../src/components/SpendingCard";
 import { SettingsToggle } from "../src/components/SettingsToggle";
 import { AgendaNotifications } from "../src/components/AgendaNotifications";
 import { notify } from "../src/data/feedback";
@@ -55,7 +54,14 @@ import {
 } from "../src/data/driveAutomation";
 import { uploadExcelDrive } from "../src/data/drive";
 
-type Tab = "Inicio" | "Actividad" | "Cuentas" | "Planes" | "Ajustes" | "Agenda";
+type Tab =
+  | "Inicio"
+  | "Actividad"
+  | "Cuentas"
+  | "Planes"
+  | "Ajustes"
+  | "Agenda"
+  | "Perfil";
 type Form =
   | "income"
   | "expense"
@@ -186,7 +192,8 @@ function Choices({
   );
 }
 export default function Home() {
-  const { styles, dark } = useTheme();
+  const { styles, dark, colors } = useTheme();
+  const { width } = useWindowDimensions();
   const calendar = useCalendar();
   const { session } = useAuth();
   const {
@@ -203,10 +210,17 @@ export default function Home() {
     logout,
   } = useFinance();
   const contentScroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const navigationScroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const fade = useRef(new Animated.Value(1)).current;
   const [tab, setTab] = useState<Tab>("Inicio");
+  const [search, setSearch] = useState("");
+  const [activityFilter, setActivityFilter] = useState<
+    "all" | "income" | "expense"
+  >("all");
   useEffect(() => {
     contentScroll.current?.scrollTo({ y: 0, animated: false });
+    if (tab === "Inicio")
+      navigationScroll.current?.scrollTo({ x: 0, animated: false });
     let cancelled = false;
     void AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
       if (cancelled || reduce) return;
@@ -280,7 +294,7 @@ export default function Home() {
   if (isPending)
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator color="#20634c" />
+        <ActivityIndicator color={colors.accent} />
         <Text style={styles.body}>Cargando tus finanzas…</Text>
       </SafeAreaView>
     );
@@ -297,7 +311,6 @@ export default function Home() {
       </SafeAreaView>
     );
   const totals = monthly(s, month);
-  const net = bankTotal(s);
   const editAccount = (a: Account) => {
     open("account");
     setEditing(a);
@@ -331,7 +344,7 @@ export default function Home() {
     try {
       const token = await resolveDriveToken(session);
       if (!token)
-        throw new Error("Conecta Google desde Ajustes para autorizar Drive.");
+        throw new Error("Conecta Google desde Perfil para autorizar Drive.");
       const result = await uploadExcelDrive(token, s, date, to);
       setDriveExport({ name: result.name, range: `${date}:${to}` });
       notify("Excel guardado en Google Drive");
@@ -491,6 +504,7 @@ export default function Home() {
         "Movimiento",
       detail: `${s.accounts.find((a) => a.id === t.accountId)?.name} · ${t.type === "income" ? "Ingreso" : "Gasto"}`,
       amount: t.amount,
+      categoryId: t.categoryId,
       kind: t.type,
     })),
     ...s.transfers.map((t) => ({
@@ -499,10 +513,19 @@ export default function Home() {
       title: "Transferencia",
       detail: `${s.accounts.find((a) => a.id === t.fromId)?.name} → ${s.accounts.find((a) => a.id === t.toId)?.name}`,
       amount: t.amount,
+      categoryId: null,
       kind: "transfer",
     })),
   ]
     .filter((t) => t.date.startsWith(month))
+    .filter(
+      (t) =>
+        tab !== "Actividad" ||
+        ((activityFilter === "all" || activityFilter === t.kind) &&
+          `${t.title} ${t.detail} ${s.categories.find((c) => c.id === t.categoryId)?.name ?? ""}`
+            .toLocaleLowerCase("es")
+            .includes(search.toLocaleLowerCase("es"))),
+    )
     .sort((a, b) => b.date.localeCompare(a.date));
   const plans = (
     <>
@@ -540,7 +563,8 @@ export default function Home() {
                     styles.fill,
                     {
                       width: `${Math.min(100, ratio * 100)}%`,
-                      backgroundColor: ratio >= 1 ? "#c35b47" : "#67a78a",
+                      backgroundColor:
+                        ratio >= 1 ? colors.negative : colors.accent,
                     },
                   ]}
                 />
@@ -584,10 +608,55 @@ export default function Home() {
               <Text style={[styles.logo, { fontSize: 22 }]}>Agendapp</Text>
             </View>
           </View>
-          <SettingsToggle
-            open={tab === "Ajustes"}
-            onPress={() => setTab(tab === "Ajustes" ? "Inicio" : "Ajustes")}
-          />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+            <SettingsToggle
+              kind="profile"
+              open={tab === "Perfil"}
+              onPress={() => setTab(tab === "Perfil" ? "Inicio" : "Perfil")}
+            />
+            <SettingsToggle
+              open={tab === "Ajustes"}
+              onPress={() => setTab(tab === "Ajustes" ? "Inicio" : "Ajustes")}
+            />
+          </View>
+        </View>
+        <View
+          style={styles.nav}
+          accessibilityRole="tablist"
+          accessibilityLabel="Secciones principales"
+        >
+          <ScrollView
+            ref={navigationScroll}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingVertical: 9,
+              gap: 3,
+              flexGrow: 1,
+              justifyContent: width >= 600 ? "center" : "space-between",
+            }}
+          >
+            {(
+              ["Inicio", "Cuentas", "Actividad", "Planes", "Agenda"] as Tab[]
+            ).map((t) => (
+              <Pressable
+                key={t}
+                accessibilityRole="tab"
+                accessibilityLabel={t}
+                accessibilityState={{ selected: t === tab }}
+                aria-selected={t === tab}
+                onPress={() => setTab(t)}
+                style={[styles.navItem, tab === t && styles.navActive]}
+              >
+                <Text
+                  style={[styles.navLabel, tab === t && { color: "#ffffff" }]}
+                >
+                  {t}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
         <ScrollView
           ref={contentScroll}
@@ -596,179 +665,58 @@ export default function Home() {
         >
           <Animated.View style={{ gap: 22, opacity: fade }}>
             <View style={styles.sectionHead}>
-              <Text style={styles.eyebrow}>
-                {tab === "Inicio" ? "TU RESUMEN" : tab.toUpperCase()}
-              </Text>
-              {tab !== "Agenda" && tab !== "Ajustes" && (
+              <View style={{ gap: 7, flexShrink: 1 }}>
+                <Text style={styles.eyebrow}>
+                  {tab === "Inicio"
+                    ? "TU RESUMEN"
+                    : tab === "Perfil"
+                      ? "CUENTA Y NUBE"
+                      : tab.toUpperCase()}
+                </Text>
+                {tab !== "Agenda" && (
+                  <Text style={styles.pageTitle}>
+                    {tab === "Inicio"
+                      ? "Tu dinero"
+                      : tab === "Actividad"
+                        ? "Movimientos"
+                        : tab === "Cuentas"
+                          ? "Saldos y cupos"
+                          : tab === "Planes"
+                            ? "Lo que viene"
+                            : tab === "Perfil"
+                              ? "Tu cuenta"
+                              : "A tu manera"}
+                  </Text>
+                )}
+              </View>
+              {tab !== "Agenda" && tab !== "Ajustes" && tab !== "Perfil" && (
                 <DateField
                   label="Mes consultado"
                   value={month}
                   onChange={setMonth}
                   monthOnly
+                  compact
                 />
               )}
             </View>
             {tab === "Inicio" && (
               <>
-                <View style={styles.hero}>
-                  <Text style={styles.heroLabel}>
-                    Patrimonio bancario · CLP
-                  </Text>
-                  <Text style={styles.heroAmount}>{clp(net)}</Text>
-                  <Text style={styles.heroCaption}>
-                    Solo cuentas bancarias · sin tarjetas ni efectivo
-                  </Text>
-                  <View style={styles.heroStats}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.heroLabel}>
-                        Ingresos del mes de {monthLabel(month)}
-                      </Text>
-                      <Text style={styles.heroSmall}>{clp(totals.income)}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.heroLabel}>
-                        Gastos del mes de {monthLabel(month)}
-                      </Text>
-                      <Text style={styles.heroSmall}>
-                        {clp(totals.expense)}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-                <View style={styles.card}>
-                  <Text style={styles.section}>Gastos por medio de pago</Text>
-                  <Text style={styles.muted}>
-                    Total gastado en {monthLabel(month)} · sin transferencias
-                  </Text>
-                  {expensesByAccountType(s, month).map((group) => (
-                    <View
-                      key={group.name}
-                      style={[
-                        styles.row,
-                        { flexWrap: "wrap", alignItems: "center" },
-                      ]}
-                    >
-                      <Text style={styles.body}>{group.name}</Text>
-                      <Text style={styles.cardTitle}>{clp(group.total)}</Text>
-                    </View>
-                  ))}
-                </View>
-                {s.accounts.some((a) => a.type === "credit") && (
-                  <View style={styles.card}>
-                    <Text style={styles.eyebrow}>TARJETAS DE CRÉDITO</Text>
-                    {s.accounts
-                      .filter((a) => a.type === "credit")
-                      .map((a) => {
-                        const c = creditSummary(s, a);
-                        return (
-                          <View key={a.id} style={{ gap: 8 }}>
-                            <Text style={styles.cardTitle}>{a.name}</Text>
-                            <Text style={styles.accountAmount}>
-                              {c.available === null
-                                ? "Cupo sin configurar"
-                                : `${clp(c.available)} disponible`}
-                            </Text>
-                            <Text style={styles.muted}>
-                              Cupo total:{" "}
-                              {c.limit === null
-                                ? "sin configurar"
-                                : clp(c.limit)}{" "}
-                              · Deuda: {clp(c.debt)}
-                            </Text>
-                            {c.limit === null && (
-                              <Button
-                                label="Configurar tarjeta"
-                                secondary
-                                onPress={() => editAccount(a)}
-                              />
-                            )}
-                          </View>
-                        );
-                      })}
-                  </View>
-                )}
-                {s.accounts.some((a) => a.type === "cash") && (
-                  <View style={styles.card}>
-                    <Text style={styles.eyebrow}>
-                      Efectivo · separado del patrimonio bancario
-                    </Text>
-                    <Text style={styles.accountAmount}>
-                      {clp(
-                        s.accounts
-                          .filter((a) => a.type === "cash")
-                          .reduce((n, a) => n + balance(s, a.id), 0),
-                      )}
-                    </Text>
-                  </View>
-                )}
-                <View style={styles.wrap}>
-                  <Button label="− Gasto" onPress={() => open("expense")} />
-                  <Button
-                    label="+ Ingreso"
-                    secondary
-                    onPress={() => open("income")}
-                  />
-                </View>
-                {s.accounts.length === 0 && (
-                  <View style={styles.card}>
-                    <Text style={styles.cardTitle}>
-                      Un comienzo más tranquilo
-                    </Text>
-                    <Text style={styles.body}>
-                      Agrega tu primera cuenta y su saldo actual. Después
-                      registra tus movimientos para ver cómo evoluciona tu
-                      dinero.
-                    </Text>
-                    <Button
-                      label="Crear mi primera cuenta"
-                      onPress={() => open("account")}
-                    />
-                  </View>
-                )}
-                <View style={styles.card}>
-                  <Text style={styles.eyebrow}>Balance del mes</Text>
-                  <Text style={styles.accountAmount}>
-                    {clp(totals.income - totals.expense)}
-                  </Text>
-                  <Text style={styles.muted}>
-                    {totals.income > 0
-                      ? `${Math.round(((totals.income - totals.expense) / totals.income) * 100)}% de tus ingresos queda después de gastos`
-                      : "Registra ingresos y gastos para conocer tu balance mensual."}
-                  </Text>
-                </View>
-                {totals.expense > 0 && (
-                  <View style={styles.card}>
-                    <Text style={styles.section}>En qué estás gastando</Text>
-                    {s.categories
-                      .filter((c) => c.type === "expense")
-                      .map((c) => ({ ...c, total: spent(s, c.id, month) }))
-                      .filter((c) => c.total > 0)
-                      .sort((a, b) => b.total - a.total)
-                      .slice(0, 4)
-                      .map((c) => (
-                        <View key={c.id} style={{ gap: 8 }}>
-                          <View style={styles.row}>
-                            <Text style={styles.cardTitle}>{c.name}</Text>
-                            <Text style={styles.muted}>{clp(c.total)}</Text>
-                          </View>
-                          <View style={styles.track}>
-                            <View
-                              style={[
-                                styles.fill,
-                                {
-                                  width: `${(c.total / totals.expense) * 100}%`,
-                                },
-                              ]}
-                            />
-                          </View>
-                        </View>
-                      ))}
-                  </View>
-                )}
+                <Overview
+                  state={s}
+                  month={month}
+                  onExpense={() => open("expense")}
+                  onIncome={() => open("income")}
+                  onAccount={() => open("account")}
+                  onEdit={editAccount}
+                />
                 {plans}
                 <View style={styles.sectionHead}>
                   <Text style={styles.section}>Últimos movimientos</Text>
-                  <Pressable onPress={() => setTab("Actividad")}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setTab("Actividad")}
+                    style={{ minHeight: 44, justifyContent: "center" }}
+                  >
                     <Text style={styles.link}>Ver todos →</Text>
                   </Pressable>
                 </View>
@@ -791,77 +739,219 @@ export default function Home() {
                     />
                   </View>
                 )}
-                {(tab === "Inicio" ? activity.slice(0, 5) : activity).map(
-                  (t) => (
-                    <View key={t.id} style={styles.activity}>
-                      <View
-                        style={[
-                          styles.icon,
-                          {
-                            backgroundColor: styles.secondary.backgroundColor,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 21,
-                            color: styles.cardTitle.color,
-                          }}
-                        >
-                          {t.kind === "income"
-                            ? "+"
-                            : t.kind === "expense"
-                              ? "−"
-                              : "↔"}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1, gap: 4 }}>
-                        <Text style={styles.cardTitle}>{t.title}</Text>
-                        <Text style={styles.muted}>
-                          {t.detail} · {t.date}
-                        </Text>
-                      </View>
-                      <Text
+                {tab === "Actividad" && (
+                  <>
+                    <View
+                      style={[
+                        styles.input,
+                        {
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 9,
+                          paddingVertical: 0,
+                          paddingRight: 2,
+                        },
+                      ]}
+                    >
+                      <AppIcon name="search" size={18} color={colors.muted} />
+                      <TextInput
+                        accessibilityLabel="Buscar movimientos"
+                        placeholder="Buscar por nota, categoría o cuenta"
+                        placeholderTextColor={colors.muted}
+                        value={search}
+                        onChangeText={setSearch}
                         style={{
-                          fontWeight: "700",
-                          color: styles.cardTitle.color,
+                          flex: 1,
+                          minWidth: 0,
+                          color: colors.text,
+                          fontSize: 13,
+                          fontFamily: styles.body.fontFamily,
+                          paddingVertical: 0,
                         }}
-                      >
-                        {t.kind === "expense"
-                          ? "−"
-                          : t.kind === "income"
-                            ? "+"
-                            : ""}
-                        {clp(t.amount)}
-                      </Text>
-                      {t.kind !== "transfer" && (
+                      />
+                      {!!search && (
                         <Pressable
                           accessibilityRole="button"
-                          accessibilityLabel={`Editar ${t.kind === "income" ? "ingreso" : "gasto"}: ${t.title}`}
-                          onPress={() =>
-                            editTransaction(
-                              s.transactions.find((x) => x.id === t.id)!,
-                            )
-                          }
-                          style={[
-                            styles.chip,
-                            {
-                              width: 44,
-                              height: 44,
-                              padding: 0,
-                              alignItems: "center",
-                            },
-                          ]}
+                          accessibilityLabel="Limpiar búsqueda"
+                          onPress={() => setSearch("")}
+                          style={styles.iconButton}
                         >
-                          <Text style={styles.cardTitle}>✎</Text>
+                          <AppIcon
+                            name="close"
+                            size={17}
+                            color={colors.muted}
+                          />
                         </Pressable>
                       )}
                     </View>
-                  ),
+                    <View style={styles.wrap}>
+                      {(
+                        [
+                          ["all", "Todos"],
+                          ["expense", "Gastos"],
+                          ["income", "Ingresos"],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <Pressable
+                          key={id}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Filtrar ${label.toLocaleLowerCase("es")}`}
+                          aria-pressed={activityFilter === id}
+                          accessibilityState={{
+                            selected: activityFilter === id,
+                          }}
+                          onPress={() => setActivityFilter(id)}
+                          style={[
+                            styles.chip,
+                            activityFilter === id && styles.chipSelected,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.label,
+                              activityFilter === id && { color: "#fff" },
+                            ]}
+                          >
+                            {label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </>
                 )}
+                <View>
+                  {(tab === "Inicio" ? activity.slice(0, 5) : activity).map(
+                    (t, i, entries) => (
+                      <View key={t.id}>
+                        {tab === "Actividad" &&
+                          (i === 0 || entries[i - 1].date !== t.date) && (
+                            <Text
+                              style={[
+                                styles.eyebrow,
+                                {
+                                  paddingTop: 12,
+                                  paddingBottom: 6,
+                                  letterSpacing: 0.6,
+                                },
+                              ]}
+                            >
+                              {new Intl.DateTimeFormat("es-CL", {
+                                weekday: "long",
+                                day: "numeric",
+                                month: "long",
+                              }).format(new Date(t.date + "T12:00:00"))}
+                            </Text>
+                          )}
+                        <View style={styles.activity}>
+                          {tab !== "Actividad" && (
+                            <View
+                              style={[
+                                styles.icon,
+                                {
+                                  backgroundColor:
+                                    (t.kind === "income"
+                                      ? colors.positive
+                                      : colors.accent) + "16",
+                                },
+                              ]}
+                            >
+                              <AppIcon
+                                name={
+                                  t.kind === "income"
+                                    ? "income"
+                                    : t.kind === "expense"
+                                      ? "expense"
+                                      : "transfer"
+                                }
+                                color={
+                                  t.kind === "income"
+                                    ? colors.positive
+                                    : colors.accent
+                                }
+                                size={18}
+                              />
+                            </View>
+                          )}
+                          <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
+                            <Text
+                              numberOfLines={2}
+                              style={[styles.cardTitle, { fontSize: 13 }]}
+                            >
+                              {t.title}
+                            </Text>
+                            {t.categoryId && (
+                              <CategoryTag
+                                id={t.categoryId}
+                                name={
+                                  s.categories.find(
+                                    (c) => c.id === t.categoryId,
+                                  )?.name ?? "Categoría"
+                                }
+                                small
+                              />
+                            )}
+                            <Text
+                              style={[
+                                styles.muted,
+                                { fontSize: 11, lineHeight: 16 },
+                              ]}
+                            >
+                              {tab === "Actividad"
+                                ? t.detail.replace(/ · (Ingreso|Gasto)$/, "")
+                                : t.detail}
+                              {tab === "Inicio" ? ` · ${t.date}` : ""}
+                            </Text>
+                          </View>
+                          <Text
+                            adjustsFontSizeToFit
+                            numberOfLines={1}
+                            style={[
+                              styles.label,
+                              {
+                                maxWidth: 120,
+                                fontSize: 13,
+                                color:
+                                  t.kind === "income"
+                                    ? colors.positive
+                                    : colors.text,
+                              },
+                            ]}
+                          >
+                            {t.kind === "expense"
+                              ? "−"
+                              : t.kind === "income"
+                                ? "+"
+                                : ""}
+                            {clp(t.amount)}
+                          </Text>
+                          {t.kind !== "transfer" && (
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel={`Editar ${t.kind === "income" ? "ingreso" : "gasto"}: ${t.title}`}
+                              onPress={() =>
+                                editTransaction(
+                                  s.transactions.find((x) => x.id === t.id)!,
+                                )
+                              }
+                              style={[styles.iconButton, { width: 44 }]}
+                            >
+                              <AppIcon
+                                name="edit"
+                                size={16}
+                                color={colors.accent}
+                              />
+                            </Pressable>
+                          )}
+                        </View>
+                      </View>
+                    ),
+                  )}
+                </View>
                 {activity.length === 0 && (
                   <Text style={styles.empty}>
-                    Aún no hay movimientos en este mes.
+                    {tab === "Actividad" && (search || activityFilter !== "all")
+                      ? "No hay movimientos que coincidan con estos filtros."
+                      : "Aún no hay movimientos en este mes."}
                   </Text>
                 )}
               </>
@@ -874,47 +964,62 @@ export default function Home() {
                   </Text>
                   <Button label="+ Cuenta" onPress={() => open("account")} />
                 </View>
-                {s.accounts.map((a) => (
-                  <View style={styles.card} key={a.id}>
-                    <Text style={styles.eyebrow}>{accountTypeLabel(a)}</Text>
-                    <Text style={styles.cardTitle}>{a.name}</Text>
-                    {!!a.bank && <Text style={styles.muted}>{a.bank}</Text>}
-                    {a.type === "bank" && (
-                      <Text style={styles.muted}>
-                        Mantención mensual:{" "}
-                        {a.maintenanceFee === undefined
-                          ? "sin informar"
-                          : clp(a.maintenanceFee)}{" "}
-                        · informativo
-                      </Text>
-                    )}
-                    {a.type === "credit" && (
-                      <Text style={styles.muted}>
-                        Cupo total:{" "}
-                        {a.creditLimit === undefined
-                          ? "sin configurar"
-                          : clp(a.creditLimit)}{" "}
-                        · Facturación:{" "}
-                        {a.billingDay
-                          ? `día ${a.billingDay}`
-                          : "sin configurar"}
-                      </Text>
-                    )}
-                    <Button
-                      label="Editar datos"
-                      secondary
-                      onPress={() => editAccount(a)}
-                    />
-                    <Text style={styles.accountAmount}>
-                      {clp(balance(s, a.id))}
-                    </Text>
-                    {a.type === "credit" && (
-                      <Text style={styles.muted}>
-                        Saldo negativo = deuda pendiente.
-                      </Text>
-                    )}
-                  </View>
-                ))}
+                {(["credit", "bank", "cash"] as const).map((kind) => {
+                  const accounts = s.accounts.filter((a) => a.type === kind);
+                  return (
+                    accounts.length > 0 && (
+                      <View key={kind} style={{ gap: 12 }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            gap: 8,
+                            alignItems: "center",
+                          }}
+                        >
+                          <AppIcon
+                            name={
+                              kind === "credit"
+                                ? "credit"
+                                : kind === "bank"
+                                  ? "bank"
+                                  : "wallet"
+                            }
+                            size={17}
+                            color={colors.muted}
+                          />
+                          <Text style={styles.eyebrow}>
+                            {kind === "credit"
+                              ? "Tarjetas de crédito"
+                              : kind === "bank"
+                                ? "Cuentas bancarias"
+                                : "Efectivo"}
+                          </Text>
+                          <Text style={styles.muted}>· {accounts.length}</Text>
+                        </View>
+                        <View
+                          style={{
+                            gap: 16,
+                            flexDirection: width >= 850 ? "row" : "column",
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          {accounts.map((a) => (
+                            <View
+                              key={a.id}
+                              style={{ width: width >= 850 ? "48.8%" : "100%" }}
+                            >
+                              <AccountCard
+                                account={a}
+                                state={s}
+                                onEdit={() => editAccount(a)}
+                              />
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    )
+                  );
+                })}
                 {s.accounts.length === 0 && (
                   <Text style={styles.empty}>
                     Agrega una cuenta bancaria, efectivo o tarjeta.
@@ -935,64 +1040,106 @@ export default function Home() {
                   Gastos mensuales que se registran al abrir la app. La fecha
                   inicial define el día del mes.
                 </Text>
-                {s.recurring.map((r) => (
-                  <View style={styles.card} key={r.id}>
+                <View
+                  style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}
+                >
+                  {s.recurring.map((r) => (
+                    <View
+                      key={r.id}
+                      style={[
+                        styles.card,
+                        {
+                          width:
+                            width >= 850
+                              ? "31.8%"
+                              : width >= 360
+                                ? "48%"
+                                : "100%",
+                          padding: 16,
+                          gap: 10,
+                        },
+                      ]}
+                    >
+                      <View style={[styles.row, { alignItems: "center" }]}>
+                        <View
+                          style={[
+                            styles.icon,
+                            {
+                              backgroundColor: colors.soft,
+                              width: 36,
+                              height: 36,
+                              borderRadius: 12,
+                            },
+                          ]}
+                        >
+                          <AppIcon
+                            name="calendar"
+                            color={colors.accent}
+                            size={18}
+                          />
+                        </View>
+                        <View
+                          style={[
+                            styles.badge,
+                            {
+                              backgroundColor: r.active
+                                ? colors.soft
+                                : colors.border + "44",
+                              paddingHorizontal: 7,
+                              paddingVertical: 3,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.label,
+                              {
+                                fontSize: 9,
+                                color: r.active ? colors.accent : colors.muted,
+                              },
+                            ]}
+                          >
+                            {r.active ? "ACTIVO" : "EN PAUSA"}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.cardTitle}>
+                        {r.note ||
+                          s.categories.find((c) => c.id === r.categoryId)?.name}
+                      </Text>
+                      <Text style={[styles.accountAmount, { fontSize: 21 }]}>
+                        {clp(r.amount)}
+                      </Text>
+                      <Text style={styles.muted}>Próximo: {r.nextDate}</Text>
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => {
+                          void save({
+                            kind: "toggle-recurring",
+                            id: r.id,
+                          }).catch((e) => notify(e.message, "error"));
+                        }}
+                        style={[styles.button, styles.secondary]}
+                      >
+                        <Text
+                          style={[styles.buttonText, { color: colors.accent }]}
+                        >
+                          {r.active ? "Pausar" : "Reanudar"}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+                {!s.recurring.length && (
+                  <View style={[styles.card, { alignItems: "flex-start" }]}>
+                    <AppIcon name="calendar" size={25} color={colors.accent} />
                     <Text style={styles.cardTitle}>
-                      {r.note ||
-                        s.categories.find((c) => c.id === r.categoryId)?.name}
+                      Tus pagos habituales, a la vista
                     </Text>
                     <Text style={styles.body}>
-                      {clp(r.amount)} · Próximo: {r.nextDate}
+                      Agrega arriendo, servicios o suscripciones para tener
+                      presente su próximo registro.
                     </Text>
-                    <Button
-                      label={r.active ? "Pausar" : "Reanudar"}
-                      secondary
-                      onPress={() => {
-                        void save({ kind: "toggle-recurring", id: r.id }).catch(
-                          (e) => setMessage(e.message),
-                        );
-                      }}
-                    />
-                  </View>
-                ))}
-                <View style={styles.card}>
-                  <Text style={styles.eyebrow}>Balance del mes</Text>
-                  <Text style={styles.accountAmount}>
-                    {clp(totals.income - totals.expense)}
-                  </Text>
-                  <Text style={styles.muted}>
-                    {totals.income > 0
-                      ? `${Math.round(((totals.income - totals.expense) / totals.income) * 100)}% de tus ingresos queda después de gastos`
-                      : "Registra ingresos y gastos para conocer tu balance mensual."}
-                  </Text>
-                </View>
-                {totals.expense > 0 && (
-                  <View style={styles.card}>
-                    <Text style={styles.section}>En qué estás gastando</Text>
-                    {s.categories
-                      .filter((c) => c.type === "expense")
-                      .map((c) => ({ ...c, total: spent(s, c.id, month) }))
-                      .filter((c) => c.total > 0)
-                      .sort((a, b) => b.total - a.total)
-                      .slice(0, 4)
-                      .map((c) => (
-                        <View key={c.id} style={{ gap: 8 }}>
-                          <View style={styles.row}>
-                            <Text style={styles.cardTitle}>{c.name}</Text>
-                            <Text style={styles.muted}>{clp(c.total)}</Text>
-                          </View>
-                          <View style={styles.track}>
-                            <View
-                              style={[
-                                styles.fill,
-                                {
-                                  width: `${(c.total / totals.expense) * 100}%`,
-                                },
-                              ]}
-                            />
-                          </View>
-                        </View>
-                      ))}
                   </View>
                 )}
                 {plans}
@@ -1006,7 +1153,32 @@ export default function Home() {
                 </View>
                 {s.goals.map((g) => (
                   <View style={styles.card} key={g.id}>
-                    <Text style={styles.cardTitle}>{g.name}</Text>
+                    <View style={[styles.row, { alignItems: "center" }]}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 10,
+                        }}
+                      >
+                        <View
+                          style={[
+                            styles.icon,
+                            { backgroundColor: colors.soft },
+                          ]}
+                        >
+                          <AppIcon name="target" color={colors.accent} />
+                        </View>
+                        <Text style={styles.cardTitle}>{g.name}</Text>
+                      </View>
+                      <Text style={styles.link}>
+                        {Math.min(
+                          100,
+                          Math.round((contributed(s, g.id) / g.target) * 100),
+                        )}
+                        %
+                      </Text>
+                    </View>
                     <Text style={styles.muted}>
                       {s.accounts.find((a) => a.id === g.accountId)?.name}
                     </Text>
@@ -1048,9 +1220,10 @@ export default function Home() {
                 save={save}
               />
             )}
-            {tab === "Ajustes" && (
+            {(tab === "Ajustes" || tab === "Perfil") && (
               <Settings
-                key={session?.user.id ?? "guest"}
+                section={tab === "Perfil" ? "profile" : "preferences"}
+                key={`${session?.user.id ?? "guest"}:${tab}`}
                 state={s}
                 save={save}
                 restore={restore}
@@ -1060,44 +1233,32 @@ export default function Home() {
                 logout={logout}
               />
             )}
-            <Text style={styles.footer}>
-              AGENDAPP · DALE ESPACIO A LO QUE IMPORTA
-            </Text>
+            <Text style={styles.footer}>AGENDAPP</Text>
           </Animated.View>
         </ScrollView>
-        <View style={styles.nav}>
-          {(
-            ["Inicio", "Actividad", "Cuentas", "Planes", "Agenda"] as Tab[]
-          ).map((t, i) => (
-            <Pressable
-              key={t}
-              accessibilityRole="tab"
-              accessibilityLabel={t}
-              accessibilityState={{ selected: t === tab }}
-              aria-selected={t === tab}
-              onPress={() => setTab(t)}
-              style={styles.navItem}
-            >
-              <Text
-                style={{
-                  fontSize: 21,
-                  color: tab === t ? styles.link.color : styles.muted.color,
-                }}
-              >
-                {["$", "⇅", "▤", "◎", "▦"][i]}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: tab === t ? "700" : "400",
-                  color: tab === t ? styles.link.color : styles.muted.color,
-                }}
-              >
-                {t}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        {(tab === "Inicio" || tab === "Actividad") && s.accounts.length > 0 && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Registrar gasto"
+            onPress={() => open("expense")}
+            style={[
+              styles.button,
+              {
+                position: "absolute",
+                bottom: 20,
+                right: 20,
+                width: 54,
+                height: 54,
+                borderRadius: 18,
+                padding: 0,
+                boxShadow: "0 5px 20px #7132c34d",
+                elevation: 7,
+              },
+            ]}
+          >
+            <AppIcon name="plus" size={26} color="#ffffff" />
+          </Pressable>
+        )}
       </View>
       <Modal
         visible={
@@ -1121,19 +1282,41 @@ export default function Home() {
             style={styles.overlay}
           >
             <View style={styles.sheet}>
+              <View
+                style={{
+                  width: 34,
+                  height: 4,
+                  borderRadius: 4,
+                  backgroundColor: colors.muted,
+                  opacity: 0.35,
+                  alignSelf: "center",
+                  marginTop: 10,
+                }}
+              />
               <ScrollView
                 contentContainerStyle={{ padding: 24, gap: 18 }}
                 keyboardShouldPersistTaps="handled"
               >
-                <Text style={styles.section}>
-                  {editingTransaction
-                    ? form === "income"
-                      ? "Editar ingreso"
-                      : "Editar gasto"
-                    : form
-                      ? titles[form]
-                      : ""}
-                </Text>
+                <View style={[styles.row, { alignItems: "center" }]}>
+                  <Text style={[styles.section, { flex: 1 }]}>
+                    {editingTransaction
+                      ? form === "income"
+                        ? "Editar ingreso"
+                        : "Editar gasto"
+                      : form
+                        ? titles[form]
+                        : ""}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Cerrar editor"
+                    disabled={busy || saving}
+                    onPress={() => setForm(null)}
+                    style={styles.iconButton}
+                  >
+                    <AppIcon name="close" />
+                  </Pressable>
+                </View>
                 {(form === "account" || form === "goal") && (
                   <Field
                     label={
@@ -1370,7 +1553,7 @@ export default function Home() {
                     {(!session ||
                       (!driveAutomationEnabled && !session.provider_token)) && (
                       <Text style={styles.muted}>
-                        Conecta Google desde Ajustes para habilitar esta opción.
+                        Conecta Google desde Perfil para habilitar esta opción.
                       </Text>
                     )}
                     <Button

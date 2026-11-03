@@ -31,6 +31,7 @@ import {
 import { CalendarContent, DateField, useCalendar } from "./DateField";
 import { requestAgendaPermission } from "../data/agendaNotifications";
 import { notify } from "../data/feedback";
+import { AppIcon } from "./AppIcon";
 import { useTheme } from "./theme";
 
 const dateLabel = (day: string, options: Intl.DateTimeFormatOptions) =>
@@ -205,8 +206,10 @@ export function Agenda({
     <View style={{ gap: 18 }}>
       <View style={styles.sectionHead}>
         <View style={{ gap: 5, flexShrink: 1 }}>
-          <Text style={styles.section}>Tu agenda</Text>
-          <Text style={styles.body}>Hazle espacio a lo que viene.</Text>
+          <Text style={styles.pageTitle}>Tu agenda</Text>
+          <Text style={styles.body}>
+            Tus días, con espacio para lo importante.
+          </Text>
         </View>
         {button("+ Evento", () => open())}
       </View>
@@ -265,7 +268,7 @@ export function Agenda({
               { width: 44, height: 44, alignItems: "center", padding: 0 },
             ]}
           >
-            <Text style={styles.cardTitle}>‹</Text>
+            <AppIcon name="left" size={20} />
           </Pressable>
           <Text
             accessibilityLiveRegion="polite"
@@ -295,7 +298,7 @@ export function Agenda({
               { width: 44, height: 44, alignItems: "center", padding: 0 },
             ]}
           >
-            <Text style={styles.cardTitle}>›</Text>
+            <AppIcon name="right" size={20} />
           </Pressable>
         </View>
         <View

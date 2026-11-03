@@ -24,7 +24,10 @@
       "output": "static",
       "favicon": "./assets/favicon.png"
     },
-    "scheme": ["agendapp", "qgasto"],
+    "scheme": [
+      "agendapp",
+      "qgasto"
+    ],
     "plugins": [
       "expo-router",
       "expo-sharing",
@@ -41,7 +44,8 @@
         {
           "color": "#078292"
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

@@ -70,7 +70,7 @@ try {
     }).format(-100000),
   );
   await page.getByText(debtLabel, { exact: true }).waitFor();
-  await button("Editar datos").first().click();
+  await button("Editar datos de Cuenta principal").click();
   await button("Cuenta vista").click();
   await button("BancoEstado").click();
   await field("Mantención mensual CLP").fill("4000");
@@ -100,7 +100,7 @@ try {
   await button("Exportar Excel").click();
   assert.equal(await button("Subir Excel a Drive").isEnabled(), false);
   await page
-    .getByText("Conecta Google desde Ajustes para habilitar esta opción.", {
+    .getByText("Conecta Google desde Perfil para habilitar esta opción.", {
       exact: true,
     })
     .waitFor();
@@ -221,9 +221,7 @@ try {
   await button("Mes consultado").click();
   await field("Año del calendario").fill("2028");
   await button("Febrero 2028").click();
-  await page
-    .getByText("Ingresos del mes de febrero", { exact: true })
-    .waitFor();
+  await page.getByText("Feb 2028", { exact: true }).waitFor();
   await button("Mes consultado").click();
   await button("Hoy").click();
   // Category settings and editing both kinds of transactions.
@@ -268,7 +266,7 @@ try {
   await page.getByRole("tab", { name: "Inicio" }).click();
   const breakdown = page
     .getByText("Gastos por medio de pago", { exact: true })
-    .locator("..");
+    .locator("../..");
   await breakdown.getByText("$75.000", { exact: true }).waitFor();
   await breakdown.getByText("Cuenta vista", { exact: true }).waitFor();
   await page.getByRole("tab", { name: "Actividad" }).click();
