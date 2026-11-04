@@ -1,5 +1,6 @@
+import { Pressable } from "./Pressable";
 import { useEffect, useRef } from "react";
-import { Animated, Easing, Platform, Pressable, View } from "react-native";
+import { Animated, Easing, Platform, View } from "react-native";
 import { AppIcon } from "./AppIcon";
 import { useReducedMotion } from "./motion";
 import { useTheme } from "./theme";

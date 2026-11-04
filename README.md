@@ -67,3 +67,5 @@ Ver [guía Android](docs/android-development.md). El proyecto incluye `expo-dev-
 La validación de aislamiento entre usuarios se describe en [esta guía](docs/user-isolation-testing.md), con un control local de la clave pública y una prueba RLS reversible para ejecutar en el proyecto real.
 
 El rediseño usa Inter, iconos Lucide, gráficos SVG y temas violeta claro/oscuro. Ver [sistema visual y prueba Android](docs/design-system.md). Para comprobar búsqueda, filtros, navegación de Perfil y diseños de 320 a 1280 px: `npm run test:design:web`, con el export web servido en el puerto 8081.
+
+Los botones incluyen respuesta de presión discreta; los menús emergentes permiten arrastrar su barra superior para cerrar y reservan espacio para teclado y navegación del sistema. La hora de Agenda usa un reloj nativo en Android y la fecha conserva su calendario independiente. Ver [interacciones y selectores](docs/interactions-and-inputs.md) y `npm run test:interactions:web`.

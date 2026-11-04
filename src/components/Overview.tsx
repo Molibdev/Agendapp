@@ -1,4 +1,5 @@
-import { Pressable, Text, View, useWindowDimensions } from "react-native";
+import { Pressable } from "./Pressable";
+import { Text, View, useWindowDimensions } from "react-native";
 import {
   State,
   Account,

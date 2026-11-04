@@ -1,15 +1,8 @@
+import { Sheet } from "./Sheet";
+import { Pressable } from "./Pressable";
 import { FloatingFeedback } from "./FloatingFeedback";
 import React, { useEffect, useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Modal, Text, TextInput, View } from "react-native";
 import { supabase, useAuth } from "../data/auth";
 import { updateRecoveredPassword } from "../data/accountActions";
 import { useTheme } from "./theme";
@@ -68,103 +61,95 @@ export function AccountRecovery() {
         } else setAccountNotice("");
       }}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.overlay}
+      <Sheet
+        onClose={() => {
+          if (recovering) void cancel();
+          else setAccountNotice("");
+        }}
+        disabled={busy}
       >
-        <View style={styles.sheet}>
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ padding: 24, gap: 18 }}
-          >
-            <Text style={styles.section}>
-              {recovering ? "Recuperar contraseña" : "Tu cuenta"}
+        <Text style={styles.section}>
+          {recovering ? "Recuperar contraseña" : "Tu cuenta"}
+        </Text>
+        {recovering ? (
+          <>
+            <Text style={styles.body}>
+              Elige una contraseña nueva para{" "}
+              {session?.user.email ?? "tu cuenta"}. Usa al menos 8 caracteres.
             </Text>
-            {recovering ? (
-              <>
-                <Text style={styles.body}>
-                  Elige una contraseña nueva para{" "}
-                  {session?.user.email ?? "tu cuenta"}. Usa al menos 8
-                  caracteres.
-                </Text>
-                <TextInput
-                  accessibilityLabel="Nueva contraseña"
-                  placeholder="Nueva contraseña"
-                  placeholderTextColor={styles.muted.color}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoComplete="new-password"
-                  style={styles.input}
-                  editable={!busy}
-                />
-                <TextInput
-                  accessibilityLabel="Repetir contraseña"
-                  placeholder="Repetir contraseña"
-                  placeholderTextColor={styles.muted.color}
-                  value={confirmation}
-                  onChangeText={setConfirmation}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoComplete="new-password"
-                  style={styles.input}
-                  editable={!busy}
-                />
-                {button(
-                  busy ? "Guardando…" : "Guardar nueva contraseña",
-                  () => {
-                    if (!supabase || !session) {
-                      setError(
-                        "La sesión de recuperación venció. Solicita otro correo.",
-                      );
-                      return;
-                    }
-                    setBusy(true);
-                    setError("");
-                    void updateRecoveredPassword(
-                      supabase.auth,
-                      password,
-                      confirmation,
-                    )
-                      .then(async () => {
-                        setPassword("");
-                        setConfirmation("");
-                        await finishRecovery();
-                        setAccountNotice(
-                          "Contraseña actualizada. La sesión sigue iniciada en este dispositivo.",
-                        );
-                      })
-                      .catch((e) =>
-                        setError(
-                          e instanceof Error
-                            ? e.message
-                            : "No se pudo cambiar la contraseña.",
-                        ),
-                      )
-                      .finally(() => setBusy(false));
-                  },
-                )}
-                {button("Cancelar recuperación", () => {
-                  void cancel();
-                })}
-              </>
-            ) : (
-              <>
-                <Text accessibilityRole="alert" style={styles.body}>
-                  {accountNotice}
-                </Text>
-                {button("Entendido", () => setAccountNotice(""))}
-              </>
-            )}
-            {!!error && (
-              <Text accessibilityRole="alert" style={styles.error}>
-                {error}
-              </Text>
-            )}
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
+            <TextInput
+              accessibilityLabel="Nueva contraseña"
+              placeholder="Nueva contraseña"
+              placeholderTextColor={styles.muted.color}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoComplete="new-password"
+              style={styles.input}
+              editable={!busy}
+            />
+            <TextInput
+              accessibilityLabel="Repetir contraseña"
+              placeholder="Repetir contraseña"
+              placeholderTextColor={styles.muted.color}
+              value={confirmation}
+              onChangeText={setConfirmation}
+              secureTextEntry
+              autoCapitalize="none"
+              autoComplete="new-password"
+              style={styles.input}
+              editable={!busy}
+            />
+            {button(busy ? "Guardando…" : "Guardar nueva contraseña", () => {
+              if (!supabase || !session) {
+                setError(
+                  "La sesión de recuperación venció. Solicita otro correo.",
+                );
+                return;
+              }
+              setBusy(true);
+              setError("");
+              void updateRecoveredPassword(
+                supabase.auth,
+                password,
+                confirmation,
+              )
+                .then(async () => {
+                  setPassword("");
+                  setConfirmation("");
+                  await finishRecovery();
+                  setAccountNotice(
+                    "Contraseña actualizada. La sesión sigue iniciada en este dispositivo.",
+                  );
+                })
+                .catch((e) =>
+                  setError(
+                    e instanceof Error
+                      ? e.message
+                      : "No se pudo cambiar la contraseña.",
+                  ),
+                )
+                .finally(() => setBusy(false));
+            })}
+            {button("Cancelar recuperación", () => {
+              void cancel();
+            })}
+          </>
+        ) : (
+          <>
+            <Text accessibilityRole="alert" style={styles.body}>
+              {accountNotice}
+            </Text>
+            {button("Entendido", () => setAccountNotice(""))}
+          </>
+        )}
+        {!!error && (
+          <Text accessibilityRole="alert" style={styles.error}>
+            {error}
+          </Text>
+        )}
+      </Sheet>
       <FloatingFeedback modal active={recovering || !!accountNotice} />
     </Modal>
   );

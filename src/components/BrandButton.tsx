@@ -1,9 +1,9 @@
+import { Pressable } from "./Pressable";
 import { useEffect, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   Image,
   Platform,
-  Pressable,
   type GestureResponderEvent,
 } from "react-native";
 import { APP_ABOUT } from "../data/appInfo";

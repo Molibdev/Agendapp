@@ -20,7 +20,10 @@ await page.clock.install({ time: new Date("2026-11-02T15:00:00Z") });
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 const button = (name) => page.getByRole("button", { name, exact: true });
-const field = (name) => page.getByRole("textbox", { name, exact: true });
+const field = (name) =>
+  name.startsWith("Hora de")
+    ? page.getByLabel(name, { exact: true })
+    : page.getByRole("textbox", { name, exact: true });
 const edit = (title) => button(`Editar evento: ${title}`);
 const date = async (label, day) => {
   await button(label).click();

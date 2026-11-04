@@ -1,3 +1,5 @@
+import { Sheet } from "../src/components/Sheet";
+import { Pressable } from "../src/components/Pressable";
 import { FloatingFeedback } from "../src/components/FloatingFeedback";
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -5,12 +7,10 @@ import {
   Animated,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   Text,
   TextInput,
   View,
-  KeyboardAvoidingView,
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -1186,7 +1186,13 @@ export default function Home() {
           testID="bottom-navigation"
           style={[
             styles.nav,
-            width >= 600 && { width: 480, alignSelf: "center" },
+            { position: "absolute", bottom: 0, left: 0, right: 0 },
+            width >= 600 && {
+              width: 480,
+              left: "50%",
+              right: "auto",
+              marginLeft: -240,
+            },
           ]}
           accessibilityRole="tablist"
           accessibilityLabel="Secciones principales"
@@ -1259,323 +1265,293 @@ export default function Home() {
         {calendar.request ? (
           <CalendarContent />
         ) : form ? (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-            style={styles.overlay}
-          >
-            <View style={styles.sheet}>
-              <View
-                style={{
-                  width: 34,
-                  height: 4,
-                  borderRadius: 4,
-                  backgroundColor: colors.muted,
-                  opacity: 0.35,
-                  alignSelf: "center",
-                  marginTop: 10,
-                }}
-              />
-              <ScrollView
-                contentContainerStyle={{ padding: 24, gap: 18 }}
-                keyboardShouldPersistTaps="handled"
+          <Sheet onClose={() => setForm(null)} disabled={busy || saving}>
+            <View style={[styles.row, { alignItems: "center" }]}>
+              <Text style={[styles.section, { flex: 1 }]}>
+                {editing && form === "account"
+                  ? "Editar cuenta"
+                  : editingTransaction
+                    ? form === "income"
+                      ? "Editar ingreso"
+                      : "Editar gasto"
+                    : form
+                      ? titles[form]
+                      : ""}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar editor"
+                disabled={busy || saving}
+                onPress={() => setForm(null)}
+                style={styles.iconButton}
               >
-                <View style={[styles.row, { alignItems: "center" }]}>
-                  <Text style={[styles.section, { flex: 1 }]}>
-                    {editingTransaction
-                      ? form === "income"
-                        ? "Editar ingreso"
-                        : "Editar gasto"
-                      : form
-                        ? titles[form]
-                        : ""}
-                  </Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Cerrar editor"
-                    disabled={busy || saving}
-                    onPress={() => setForm(null)}
-                    style={styles.iconButton}
-                  >
-                    <AppIcon name="close" />
-                  </Pressable>
-                </View>
-                {(form === "account" || form === "goal") && (
-                  <Field
-                    label={
-                      form === "account" ? "Nombre de la cuenta" : "Nombre"
-                    }
-                    value={name}
-                    onChange={setName}
-                  />
-                )}
-                {form === "account" && (
+                <AppIcon name="close" />
+              </Pressable>
+            </View>
+            {(form === "account" || form === "goal") && (
+              <Field
+                label={form === "account" ? "Nombre de la cuenta" : "Nombre"}
+                value={name}
+                onChange={setName}
+              />
+            )}
+            {form === "account" && (
+              <>
+                <Choices
+                  label="Tipo de cuenta"
+                  value={type === "bank" ? bankType : type}
+                  onChange={(v) => {
+                    if (v === "checking" || v === "sight") {
+                      setType("bank");
+                      setBankType(v);
+                    } else setType(v as Account["type"]);
+                  }}
+                  options={[
+                    { id: "checking", name: "Cuenta corriente" },
+                    { id: "sight", name: "Cuenta vista" },
+                    { id: "credit", name: "Tarjeta de crédito" },
+                    { id: "cash", name: "Efectivo" },
+                  ].filter(
+                    (o) =>
+                      !editing ||
+                      (editing.type === "bank"
+                        ? o.id === "checking" || o.id === "sight"
+                        : o.id === editing.type),
+                  )}
+                />
+                {type !== "cash" && (
                   <>
                     <Choices
-                      label="Tipo de cuenta"
-                      value={type === "bank" ? bankType : type}
-                      onChange={(v) => {
-                        if (v === "checking" || v === "sight") {
-                          setType("bank");
-                          setBankType(v);
-                        } else setType(v as Account["type"]);
-                      }}
+                      label="Banco o emisor"
+                      value={bank}
+                      onChange={setBank}
                       options={[
-                        { id: "checking", name: "Cuenta corriente" },
-                        { id: "sight", name: "Cuenta vista" },
-                        { id: "credit", name: "Tarjeta de crédito" },
-                        { id: "cash", name: "Efectivo" },
-                      ].filter(
-                        (o) =>
-                          !editing ||
-                          (editing.type === "bank"
-                            ? o.id === "checking" || o.id === "sight"
-                            : o.id === editing.type),
-                      )}
+                        "Santander",
+                        "BancoEstado",
+                        "Banco Falabella",
+                        "Banco de Chile",
+                        "BCI",
+                        "Scotiabank",
+                        "Itaú",
+                      ].map((name) => ({ id: name, name }))}
                     />
-                    {type !== "cash" && (
-                      <>
-                        <Choices
-                          label="Banco o emisor"
-                          value={bank}
-                          onChange={setBank}
-                          options={[
-                            "Santander",
-                            "BancoEstado",
-                            "Banco Falabella",
-                            "Banco de Chile",
-                            "BCI",
-                            "Scotiabank",
-                            "Itaú",
-                          ].map((name) => ({ id: name, name }))}
-                        />
-                        <Field
-                          label="Banco o emisor (puedes escribir otro)"
-                          value={bank}
-                          onChange={setBank}
-                        />
-                      </>
-                    )}
-                    {type === "bank" && (
-                      <>
-                        <Field
-                          label="Mantención mensual CLP"
-                          number
-                          value={fee}
-                          onChange={setFee}
-                        />
-                        <Text style={styles.muted}>
-                          Este costo es informativo. No se cobra ni se registra
-                          automáticamente.
-                        </Text>
-                      </>
-                    )}
-                    {type === "credit" && (
-                      <>
-                        <Field
-                          label="Cupo total CLP"
-                          number
-                          value={limit}
-                          onChange={setLimit}
-                        />
-                        <DateField
-                          label="Día de facturación mensual"
-                          dayOnly
-                          value={billing}
-                          onChange={setBilling}
-                        />
-                      </>
-                    )}
+                    <Field
+                      label="Banco o emisor (puedes escribir otro)"
+                      value={bank}
+                      onChange={setBank}
+                    />
                   </>
                 )}
-                {(form === "income" ||
-                  form === "expense" ||
-                  form === "recurring" ||
-                  form === "goal") && (
-                  <Choices
-                    label="Cuenta"
-                    options={s.accounts.filter(
-                      (a) => form !== "goal" || a.type !== "credit",
-                    )}
-                    value={account}
-                    onChange={setAccount}
-                  />
-                )}
-                {(form === "income" ||
-                  form === "expense" ||
-                  form === "budget" ||
-                  form === "recurring") && (
-                  <Choices
-                    label="Categoría"
-                    options={s.categories.filter(
-                      (c) =>
-                        c.type === (form === "income" ? "income" : "expense"),
-                    )}
-                    value={category}
-                    onChange={setCategory}
-                  />
-                )}
-                {form === "contribution" && (
-                  <Choices
-                    label="Meta"
-                    options={s.goals}
-                    value={goal}
-                    onChange={setGoal}
-                  />
-                )}
-                {form !== "export" && !(form === "account" && editing) && (
-                  <Field
-                    label={
-                      form === "account"
-                        ? "Saldo inicial CLP (negativo si es deuda)"
-                        : form === "goal"
-                          ? "Objetivo CLP"
-                          : "Monto CLP (sin separadores)"
-                    }
-                    number
-                    value={amount}
-                    onChange={setAmount}
-                  />
-                )}
-                {form === "budget" && (
-                  <DateField
-                    label="Mes del presupuesto"
-                    value={month}
-                    onChange={setMonth}
-                    monthOnly
-                  />
-                )}
-                {(form === "income" ||
-                  form === "expense" ||
-                  form === "recurring" ||
-                  form === "contribution" ||
-                  form === "export") && (
-                  <DateField
-                    label={form === "export" ? "Desde" : "Fecha"}
-                    value={date}
-                    onChange={setDate}
-                  />
-                )}
-                {form === "export" && (
+                {type === "bank" && (
                   <>
-                    <DateField label="Hasta" value={to} onChange={setTo} />
+                    <Field
+                      label="Mantención mensual CLP"
+                      number
+                      value={fee}
+                      onChange={setFee}
+                    />
                     <Text style={styles.muted}>
-                      Incluye movimientos del intervalo y saldos actuales de
-                      cuentas y metas. El archivo contiene datos financieros
-                      personales.
+                      Este costo es informativo. No se cobra ni se registra
+                      automáticamente.
                     </Text>
                   </>
                 )}
-                {(form === "income" ||
-                  form === "expense" ||
-                  form === "recurring") && (
-                  <Field
-                    label="Nota (opcional)"
-                    value={note}
-                    onChange={setNote}
-                  />
+                {type === "credit" && (
+                  <>
+                    <Field
+                      label="Cupo total CLP"
+                      number
+                      value={limit}
+                      onChange={setLimit}
+                    />
+                    <DateField
+                      label="Día de facturación mensual"
+                      dayOnly
+                      value={billing}
+                      onChange={setBilling}
+                    />
+                  </>
                 )}
-                {!!message && (
-                  <Text accessibilityRole="alert" style={styles.error}>
-                    {message}
+              </>
+            )}
+            {(form === "income" ||
+              form === "expense" ||
+              form === "recurring" ||
+              form === "goal") && (
+              <Choices
+                label="Cuenta"
+                options={s.accounts.filter(
+                  (a) => form !== "goal" || a.type !== "credit",
+                )}
+                value={account}
+                onChange={setAccount}
+              />
+            )}
+            {(form === "income" ||
+              form === "expense" ||
+              form === "budget" ||
+              form === "recurring") && (
+              <Choices
+                label="Categoría"
+                options={s.categories.filter(
+                  (c) => c.type === (form === "income" ? "income" : "expense"),
+                )}
+                value={category}
+                onChange={setCategory}
+              />
+            )}
+            {form === "contribution" && (
+              <Choices
+                label="Meta"
+                options={s.goals}
+                value={goal}
+                onChange={setGoal}
+              />
+            )}
+            {form !== "export" && !(form === "account" && editing) && (
+              <Field
+                label={
+                  form === "account"
+                    ? "Saldo inicial CLP (negativo si es deuda)"
+                    : form === "goal"
+                      ? "Objetivo CLP"
+                      : "Monto CLP (sin separadores)"
+                }
+                number
+                value={amount}
+                onChange={setAmount}
+              />
+            )}
+            {form === "budget" && (
+              <DateField
+                label="Mes del presupuesto"
+                value={month}
+                onChange={setMonth}
+                monthOnly
+              />
+            )}
+            {(form === "income" ||
+              form === "expense" ||
+              form === "recurring" ||
+              form === "contribution" ||
+              form === "export") && (
+              <DateField
+                label={form === "export" ? "Desde" : "Fecha"}
+                value={date}
+                onChange={setDate}
+              />
+            )}
+            {form === "export" && (
+              <>
+                <DateField label="Hasta" value={to} onChange={setTo} />
+                <Text style={styles.muted}>
+                  Incluye movimientos del intervalo y saldos actuales de cuentas
+                  y metas. El archivo contiene datos financieros personales.
+                </Text>
+              </>
+            )}
+            {(form === "income" ||
+              form === "expense" ||
+              form === "recurring") && (
+              <Field label="Nota (opcional)" value={note} onChange={setNote} />
+            )}
+            {!!message && (
+              <Text accessibilityRole="alert" style={styles.error}>
+                {message}
+              </Text>
+            )}
+            {duplicate ? (
+              <View style={{ gap: 12 }}>
+                <Text style={styles.error}>
+                  Ya existe un movimiento con la misma cuenta, categoría, fecha
+                  y monto. ¿Quieres registrarlo igualmente?
+                </Text>
+                <Button
+                  label="Registrar igualmente"
+                  disabled={busy || saving}
+                  onPress={() => {
+                    setBusy(true);
+                    void commit({
+                      kind: editingTransaction
+                        ? "update-transaction"
+                        : "transaction",
+                      value: duplicate,
+                    })
+                      .catch((e) => setMessage(e.message))
+                      .finally(() => setBusy(false));
+                  }}
+                />
+                <Button
+                  label="Revisar campos"
+                  secondary
+                  onPress={() => setDuplicate(null)}
+                />
+              </View>
+            ) : (
+              <Button
+                label={
+                  busy || saving
+                    ? "Guardando…"
+                    : form === "export"
+                      ? "Generar y compartir XLSX"
+                      : "Guardar"
+                }
+                disabled={busy || saving}
+                onPress={() => {
+                  void submit();
+                }}
+              />
+            )}
+            {form === "export" && (
+              <View style={[styles.card, { padding: 16 }]}>
+                <Text style={styles.cardTitle}>Tu Excel, también en Drive</Text>
+                <Text style={styles.body}>
+                  Guarda el informe del intervalo seleccionado en el Drive de la
+                  cuenta Google conectada. Cada subida crea un archivo nuevo; el
+                  Excel es un informe y no sirve para restaurar datos.
+                </Text>
+                {(!session ||
+                  (!driveAutomationEnabled && !session.provider_token)) && (
+                  <Text style={styles.muted}>
+                    Conecta Google desde Perfil para habilitar esta opción.
                   </Text>
                 )}
-                {duplicate ? (
-                  <View style={{ gap: 12 }}>
-                    <Text style={styles.error}>
-                      Ya existe un movimiento con la misma cuenta, categoría,
-                      fecha y monto. ¿Quieres registrarlo igualmente?
-                    </Text>
-                    <Button
-                      label="Registrar igualmente"
-                      disabled={busy || saving}
-                      onPress={() => {
-                        setBusy(true);
-                        void commit({
-                          kind: editingTransaction
-                            ? "update-transaction"
-                            : "transaction",
-                          value: duplicate,
-                        })
-                          .catch((e) => setMessage(e.message))
-                          .finally(() => setBusy(false));
-                      }}
-                    />
-                    <Button
-                      label="Revisar campos"
-                      secondary
-                      onPress={() => setDuplicate(null)}
-                    />
-                  </View>
-                ) : (
-                  <Button
-                    label={
-                      busy || saving
-                        ? "Guardando…"
-                        : form === "export"
-                          ? "Generar y compartir XLSX"
-                          : "Guardar"
-                    }
-                    disabled={busy || saving}
-                    onPress={() => {
-                      void submit();
-                    }}
-                  />
-                )}
-                {form === "export" && (
-                  <View style={[styles.card, { padding: 16 }]}>
-                    <Text style={styles.cardTitle}>
-                      Tu Excel, también en Drive
-                    </Text>
-                    <Text style={styles.body}>
-                      Guarda el informe del intervalo seleccionado en el Drive
-                      de la cuenta Google conectada. Cada subida crea un archivo
-                      nuevo; el Excel es un informe y no sirve para restaurar
-                      datos.
-                    </Text>
-                    {(!session ||
-                      (!driveAutomationEnabled && !session.provider_token)) && (
-                      <Text style={styles.muted}>
-                        Conecta Google desde Perfil para habilitar esta opción.
-                      </Text>
-                    )}
-                    <Button
-                      label={busy ? "Procesando…" : "Subir Excel a Drive"}
-                      disabled={
-                        busy ||
-                        saving ||
-                        !session ||
-                        (!driveAutomationEnabled && !session.provider_token) ||
-                        driveExport?.range === `${date}:${to}`
-                      }
-                      onPress={() => {
-                        void sendExcelToDrive();
-                      }}
-                    />
-                    {driveExport && (
-                      <Text accessibilityRole="alert" style={styles.body}>
-                        Guardado en Drive: {driveExport.name}
-                      </Text>
-                    )}
-                    <Button
-                      label="Configurar Google Drive"
-                      secondary
-                      disabled={busy || saving}
-                      onPress={() => {
-                        setForm(null);
-                        navigate("Ajustes");
-                      }}
-                    />
-                  </View>
+                <Button
+                  label={busy ? "Procesando…" : "Subir Excel a Drive"}
+                  disabled={
+                    busy ||
+                    saving ||
+                    !session ||
+                    (!driveAutomationEnabled && !session.provider_token) ||
+                    driveExport?.range === `${date}:${to}`
+                  }
+                  onPress={() => {
+                    void sendExcelToDrive();
+                  }}
+                />
+                {driveExport && (
+                  <Text accessibilityRole="alert" style={styles.body}>
+                    Guardado en Drive: {driveExport.name}
+                  </Text>
                 )}
                 <Button
-                  label="Cancelar"
+                  label="Configurar Google Drive"
                   secondary
                   disabled={busy || saving}
-                  onPress={() => setForm(null)}
+                  onPress={() => {
+                    setForm(null);
+                    navigate("Ajustes");
+                  }}
                 />
-              </ScrollView>
-            </View>
-          </KeyboardAvoidingView>
+              </View>
+            )}
+            <Button
+              label="Cancelar"
+              secondary
+              disabled={busy || saving}
+              onPress={() => setForm(null)}
+            />
+          </Sheet>
         ) : null}
         <FloatingFeedback
           modal

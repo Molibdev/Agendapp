@@ -1,14 +1,7 @@
+import { Sheet } from "./Sheet";
+import { Pressable } from "./Pressable";
 import React, { useState, createContext, useContext } from "react";
-import {
-  Pressable,
-  Text,
-  TextInput,
-  View,
-  ScrollView,
-  useWindowDimensions,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { Text, TextInput, View, Keyboard } from "react-native";
 import { AppIcon } from "./AppIcon";
 import { useTheme } from "./theme";
 import { dateSchema, today } from "../domain/finance";
@@ -73,7 +66,10 @@ export function DateField(props: Request) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
-        onPress={() => calendar.show(props)}
+        onPress={() => {
+          Keyboard.dismiss();
+          calendar.show(props);
+        }}
         style={[
           styles.input,
           { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -105,8 +101,6 @@ export function DateField(props: Request) {
   );
 }
 export function CalendarContent() {
-  const { width, height } = useWindowDimensions();
-  const compact = width < 600;
   const { styles } = useTheme();
   const { request, close } = useCalendar();
   const {
@@ -172,188 +166,150 @@ export function CalendarContent() {
     </Pressable>
   );
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={[
-        styles.overlay,
-        {
-          justifyContent: compact ? "flex-end" : "center",
-          padding: compact ? 8 : 24,
-        },
-      ]}
-    >
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ padding: compact ? 16 : 24, gap: 14 }}
-        accessibilityViewIsModal
-        style={[
-          styles.card,
-          {
-            maxWidth: 440,
-            width: "100%",
-            alignSelf: "center",
-            flexGrow: 0,
-            padding: 0,
-            maxHeight: height * 0.9,
-            borderRadius: 28,
-          },
-        ]}
-      >
-        <View
-          style={{
-            width: 40,
-            height: 4,
-            borderRadius: 4,
-            backgroundColor: styles.input.borderColor,
-            alignSelf: "center",
-          }}
-        />
-        <Text style={styles.eyebrow}>{label}</Text>
-        <Text style={styles.section}>
-          {dayOnly
-            ? "Día de facturación"
-            : monthOnly
-              ? "Seleccionar mes"
-              : "Seleccionar fecha"}
-        </Text>
-        <Text style={styles.body}>{formatted}</Text>
-        {!dayOnly && (
-          <View style={[styles.row, { alignItems: "center" }]}>
-            {button("Mes anterior", () => move(-1))}
-            <Text style={styles.cardTitle}>{monthNames[m - 1]}</Text>
-            {button("Mes siguiente", () => move(1))}
-          </View>
-        )}
-        {!dayOnly && (
-          <View style={[styles.row, { alignItems: "center" }]}>
-            <Text style={styles.label}>Año</Text>
-            <TextInput
-              accessibilityLabel="Año del calendario"
-              value={year}
-              keyboardType="number-pad"
-              maxLength={4}
-              style={[styles.input, { width: 100 }]}
-              onChangeText={(v) => {
-                setYear(v);
-                if (/^\d{4}$/.test(v) && Number(v) >= 1900 && Number(v) <= 2100)
-                  setCursor(`${v}-${String(m).padStart(2, "0")}`);
+    <Sheet onClose={close} maxWidth={440}>
+      <Text style={styles.eyebrow}>{label}</Text>
+      <Text style={styles.section}>
+        {dayOnly
+          ? "Día de facturación"
+          : monthOnly
+            ? "Seleccionar mes"
+            : "Seleccionar fecha"}
+      </Text>
+      <Text style={styles.body}>{formatted}</Text>
+      {!dayOnly && (
+        <View style={[styles.row, { alignItems: "center" }]}>
+          {button("Mes anterior", () => move(-1))}
+          <Text style={styles.cardTitle}>{monthNames[m - 1]}</Text>
+          {button("Mes siguiente", () => move(1))}
+        </View>
+      )}
+      {!dayOnly && (
+        <View style={[styles.row, { alignItems: "center" }]}>
+          <Text style={styles.label}>Año</Text>
+          <TextInput
+            accessibilityLabel="Año del calendario"
+            value={year}
+            keyboardType="number-pad"
+            maxLength={4}
+            style={[styles.input, { width: 100 }]}
+            onChangeText={(v) => {
+              setYear(v);
+              if (/^\d{4}$/.test(v) && Number(v) >= 1900 && Number(v) <= 2100)
+                setCursor(`${v}-${String(m).padStart(2, "0")}`);
+            }}
+          />
+        </View>
+      )}
+      {!dayOnly && !validYear && (
+        <Text style={styles.error}>Introduce un año entre 1900 y 2100.</Text>
+      )}
+      {monthOnly ? (
+        <View style={styles.wrap}>
+          {monthNames.map((name, i) => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${name} ${y}`}
+              key={name}
+              disabled={!validYear}
+              accessibilityState={{
+                selected: `${y}-${String(i + 1).padStart(2, "0")}` === value,
               }}
-            />
-          </View>
-        )}
-        {!dayOnly && !validYear && (
-          <Text style={styles.error}>Introduce un año entre 1900 y 2100.</Text>
-        )}
-        {monthOnly ? (
-          <View style={styles.wrap}>
-            {monthNames.map((name, i) => (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`${name} ${y}`}
-                key={name}
-                disabled={!validYear}
-                accessibilityState={{
-                  selected: `${y}-${String(i + 1).padStart(2, "0")}` === value,
-                }}
-                aria-selected={
-                  `${y}-${String(i + 1).padStart(2, "0")}` === value
-                }
+              aria-selected={`${y}-${String(i + 1).padStart(2, "0")}` === value}
+              style={[
+                styles.chip,
+                { width: "30%", alignItems: "center", minHeight: 48 },
+                `${y}-${String(i + 1).padStart(2, "0")}` === value &&
+                  styles.chipSelected,
+              ]}
+              onPress={() => select(`${y}-${String(i + 1).padStart(2, "0")}`)}
+            >
+              <Text
                 style={[
-                  styles.chip,
-                  { width: "30%", alignItems: "center", minHeight: 48 },
-                  `${y}-${String(i + 1).padStart(2, "0")}` === value &&
-                    styles.chipSelected,
+                  styles.cardTitle,
+                  `${y}-${String(i + 1).padStart(2, "0")}` === value && {
+                    color: "#fff",
+                  },
                 ]}
-                onPress={() => select(`${y}-${String(i + 1).padStart(2, "0")}`)}
               >
+                {name.slice(0, 3)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : (
+        <>
+          {!dayOnly && (
+            <View style={{ flexDirection: "row" }}>
+              {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
                 <Text
+                  key={i}
                   style={[
-                    styles.cardTitle,
-                    `${y}-${String(i + 1).padStart(2, "0")}` === value && {
-                      color: "#fff",
-                    },
+                    styles.muted,
+                    { width: "14.28%", textAlign: "center" },
                   ]}
                 >
-                  {name.slice(0, 3)}
+                  {d}
                 </Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : (
-          <>
-            {!dayOnly && (
-              <View style={{ flexDirection: "row" }}>
-                {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
-                  <Text
-                    key={i}
-                    style={[
-                      styles.muted,
-                      { width: "14.28%", textAlign: "center" },
-                    ]}
-                  >
-                    {d}
-                  </Text>
-                ))}
-              </View>
-            )}
-            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-              {Array.from({ length: (dayOnly ? 0 : offset) + days }, (_, i) => {
-                const day = i - (dayOnly ? 0 : offset) + 1,
-                  iso = `${cursor}-${String(day).padStart(2, "0")}`;
-                return day < 1 ? (
-                  <View key={i} style={{ width: "14.28%" }} />
-                ) : (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={dayOnly ? `Día ${day}` : iso}
-                    accessibilityState={{
-                      selected: dayOnly ? String(day) === value : iso === value,
-                    }}
-                    aria-selected={
-                      dayOnly ? String(day) === value : iso === value
-                    }
-                    key={i}
-                    disabled={!dayOnly && !validYear}
-                    onPress={() => select(dayOnly ? String(day) : iso)}
-                    style={{
-                      width: "14.28%",
-                      minHeight: 44,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: 16,
-                      borderWidth: iso === today() && !dayOnly ? 2 : 0,
-                      borderColor: styles.link.color,
-                      backgroundColor: (
-                        dayOnly ? String(day) === value : iso === value
-                      )
-                        ? styles.button.backgroundColor
-                        : "transparent",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: (dayOnly ? String(day) === value : iso === value)
-                          ? "#fff"
-                          : styles.cardTitle.color,
-                        fontWeight: "600",
-                      }}
-                    >
-                      {day}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+              ))}
             </View>
-          </>
-        )}
-        <View style={styles.wrap}>
-          {!dayOnly &&
-            button("Hoy", () =>
-              select(monthOnly ? today().slice(0, 7) : today()),
-            )}
-          {button("Cerrar calendario", () => close())}
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          )}
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            {Array.from({ length: (dayOnly ? 0 : offset) + days }, (_, i) => {
+              const day = i - (dayOnly ? 0 : offset) + 1,
+                iso = `${cursor}-${String(day).padStart(2, "0")}`;
+              return day < 1 ? (
+                <View key={i} style={{ width: "14.28%" }} />
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={dayOnly ? `Día ${day}` : iso}
+                  accessibilityState={{
+                    selected: dayOnly ? String(day) === value : iso === value,
+                  }}
+                  aria-selected={
+                    dayOnly ? String(day) === value : iso === value
+                  }
+                  key={i}
+                  disabled={!dayOnly && !validYear}
+                  onPress={() => select(dayOnly ? String(day) : iso)}
+                  style={{
+                    width: "14.28%",
+                    minHeight: 44,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 16,
+                    borderWidth: iso === today() && !dayOnly ? 2 : 0,
+                    borderColor: styles.link.color,
+                    backgroundColor: (
+                      dayOnly ? String(day) === value : iso === value
+                    )
+                      ? styles.button.backgroundColor
+                      : "transparent",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: (dayOnly ? String(day) === value : iso === value)
+                        ? "#fff"
+                        : styles.cardTitle.color,
+                      fontWeight: "600",
+                    }}
+                  >
+                    {day}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      )}
+      <View style={styles.wrap}>
+        {!dayOnly &&
+          button("Hoy", () =>
+            select(monthOnly ? today().slice(0, 7) : today()),
+          )}
+        {button("Cerrar calendario", () => close())}
+      </View>
+    </Sheet>
   );
 }

@@ -1,11 +1,11 @@
+import { TimeField } from "./TimeField";
+import { Sheet } from "./Sheet";
+import { Pressable } from "./Pressable";
 import { FloatingFeedback } from "./FloatingFeedback";
 import React, { useEffect, useRef, useState } from "react";
 import {
   AppState,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
-  Pressable,
   ScrollView,
   Switch,
   Text,
@@ -13,7 +13,6 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { randomUUID } from "expo-crypto";
 import { Command } from "../domain/finance";
 import {
@@ -47,8 +46,7 @@ export function Agenda({
   save: (command: Command) => Promise<unknown>;
 }) {
   const { styles } = useTheme(),
-    { width } = useWindowDimensions(),
-    insets = useSafeAreaInsets();
+    { width } = useWindowDimensions();
   const calendar = useCalendar();
   const [now, setNow] = useState(() => new Date());
   const [day, setDay] = useState(() => localDay(new Date()));
@@ -526,144 +524,109 @@ export function Agenda({
           <CalendarContent />
         ) : (
           draft && (
-            <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : undefined}
-              style={styles.overlay}
-            >
-              <View style={styles.sheet}>
-                <ScrollView
-                  keyboardShouldPersistTaps="handled"
-                  contentContainerStyle={{
-                    padding: 24,
-                    paddingBottom: Math.max(24, insets.bottom),
-                    gap: 18,
-                  }}
-                >
-                  <Text style={styles.section}>
-                    {editing ? "Editar evento" : "Nuevo evento"}
-                  </Text>
-                  {field("Título del evento", "title", 120)}
-                  <DateField
-                    label="Fecha de inicio"
-                    value={draft.startsAt.slice(0, 10)}
-                    onChange={(date) =>
-                      update("startsAt", `${date}T${draft.startsAt.slice(11)}`)
-                    }
-                  />
-                  <View style={{ gap: 7 }}>
-                    <Text style={styles.label}>Hora de inicio (HH:mm)</Text>
-                    <TextInput
-                      accessibilityLabel="Hora de inicio"
-                      value={draft.startsAt.slice(11)}
-                      onChangeText={(time) =>
-                        update(
-                          "startsAt",
-                          `${draft.startsAt.slice(0, 10)}T${time}`,
-                        )
-                      }
-                      maxLength={5}
-                      placeholder="09:00"
-                      placeholderTextColor={styles.muted.color}
-                      keyboardType="numbers-and-punctuation"
-                      style={styles.input}
+            <Sheet onClose={() => setDraft(null)} disabled={busy}>
+              <Text style={styles.section}>
+                {editing ? "Editar evento" : "Nuevo evento"}
+              </Text>
+              {field("Título del evento", "title", 120)}
+              <DateField
+                label="Fecha de inicio"
+                value={draft.startsAt.slice(0, 10)}
+                onChange={(date) =>
+                  update("startsAt", `${date}T${draft.startsAt.slice(11)}`)
+                }
+              />
+              <TimeField
+                label="Hora de inicio"
+                value={draft.startsAt.slice(11)}
+                onChange={(time) =>
+                  update("startsAt", `${draft.startsAt.slice(0, 10)}T${time}`)
+                }
+              />
+              <DateField
+                label="Fecha de fin"
+                value={draft.endsAt.slice(0, 10)}
+                onChange={(date) =>
+                  update("endsAt", `${date}T${draft.endsAt.slice(11)}`)
+                }
+              />
+              <TimeField
+                label="Hora de fin"
+                value={draft.endsAt.slice(11)}
+                onChange={(time) =>
+                  update("endsAt", `${draft.endsAt.slice(0, 10)}T${time}`)
+                }
+              />
+              {field("Locación", "location", 200)}
+              {field("Descripción", "description", 2000)}
+              <View style={[styles.card, { padding: 16 }]}>
+                <Text style={styles.cardTitle}>Recordatorios</Text>
+                <Text style={styles.body}>
+                  En Android, avisa a la hora del evento y el día anterior a esa
+                  misma hora. Requiere permitir notificaciones.
+                </Text>
+                {(
+                  [
+                    ["remindDayBefore", "Un día antes"],
+                    ["remindSameDay", "El mismo día"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <View
+                    key={key}
+                    style={[
+                      styles.row,
+                      { alignItems: "center", flexWrap: "wrap" },
+                    ]}
+                  >
+                    <Text style={styles.body}>{label}</Text>
+                    <Switch
+                      accessibilityLabel={label}
+                      value={draft[key]}
+                      onValueChange={(value) => update(key, value)}
+                      trackColor={{
+                        false: styles.input.borderColor,
+                        true: styles.button.backgroundColor,
+                      }}
+                      thumbColor="#fff"
                     />
                   </View>
-                  <DateField
-                    label="Fecha de fin"
-                    value={draft.endsAt.slice(0, 10)}
-                    onChange={(date) =>
-                      update("endsAt", `${date}T${draft.endsAt.slice(11)}`)
-                    }
-                  />
-                  <View style={{ gap: 7 }}>
-                    <Text style={styles.label}>Hora de fin (HH:mm)</Text>
-                    <TextInput
-                      accessibilityLabel="Hora de fin"
-                      value={draft.endsAt.slice(11)}
-                      onChangeText={(time) =>
-                        update("endsAt", `${draft.endsAt.slice(0, 10)}T${time}`)
-                      }
-                      maxLength={5}
-                      placeholder="10:00"
-                      placeholderTextColor={styles.muted.color}
-                      keyboardType="numbers-and-punctuation"
-                      style={styles.input}
-                    />
-                  </View>
-                  {field("Locación", "location", 200)}
-                  {field("Descripción", "description", 2000)}
-                  <View style={[styles.card, { padding: 16 }]}>
-                    <Text style={styles.cardTitle}>Recordatorios</Text>
-                    <Text style={styles.body}>
-                      En Android, avisa a la hora del evento y el día anterior a
-                      esa misma hora. Requiere permitir notificaciones.
-                    </Text>
-                    {(
-                      [
-                        ["remindDayBefore", "Un día antes"],
-                        ["remindSameDay", "El mismo día"],
-                      ] as const
-                    ).map(([key, label]) => (
-                      <View
-                        key={key}
-                        style={[
-                          styles.row,
-                          { alignItems: "center", flexWrap: "wrap" },
-                        ]}
-                      >
-                        <Text style={styles.body}>{label}</Text>
-                        <Switch
-                          accessibilityLabel={label}
-                          value={draft[key]}
-                          onValueChange={(value) => update(key, value)}
-                          trackColor={{
-                            false: styles.input.borderColor,
-                            true: styles.button.backgroundColor,
-                          }}
-                          thumbColor="#fff"
-                        />
-                      </View>
-                    ))}
-                  </View>
-                  {!!error && (
-                    <Text accessibilityRole="alert" style={styles.error}>
-                      {error}
-                    </Text>
-                  )}
-                  {confirmDelete ? (
-                    <View style={[styles.card, { padding: 16 }]}>
-                      <Text style={styles.cardTitle}>
-                        ¿Eliminar este evento?
-                      </Text>
-                      <Text style={styles.body}>
-                        {draft.title}. Esta acción no se puede deshacer.
-                      </Text>
-                      {button("Confirmar eliminación", () => {
-                        void commit(true);
-                      })}
-                      {button(
-                        "Conservar evento",
-                        () => setConfirmDelete(false),
-                        true,
-                      )}
-                    </View>
-                  ) : (
-                    <>
-                      {button(busy ? "Guardando…" : "Guardar evento", () => {
-                        void commit();
-                      })}
-                      {editing &&
-                        button(
-                          "Eliminar evento",
-                          () => setConfirmDelete(true),
-                          true,
-                        )}
-                    </>
-                  )}
-                  {button("Cancelar evento", () => setDraft(null), true)}
-                </ScrollView>
+                ))}
               </View>
-            </KeyboardAvoidingView>
+              {!!error && (
+                <Text accessibilityRole="alert" style={styles.error}>
+                  {error}
+                </Text>
+              )}
+              {confirmDelete ? (
+                <View style={[styles.card, { padding: 16 }]}>
+                  <Text style={styles.cardTitle}>¿Eliminar este evento?</Text>
+                  <Text style={styles.body}>
+                    {draft.title}. Esta acción no se puede deshacer.
+                  </Text>
+                  {button("Confirmar eliminación", () => {
+                    void commit(true);
+                  })}
+                  {button(
+                    "Conservar evento",
+                    () => setConfirmDelete(false),
+                    true,
+                  )}
+                </View>
+              ) : (
+                <>
+                  {button(busy ? "Guardando…" : "Guardar evento", () => {
+                    void commit();
+                  })}
+                  {editing &&
+                    button(
+                      "Eliminar evento",
+                      () => setConfirmDelete(true),
+                      true,
+                    )}
+                </>
+              )}
+              {button("Cancelar evento", () => setDraft(null), true)}
+            </Sheet>
           )
         )}
         <FloatingFeedback

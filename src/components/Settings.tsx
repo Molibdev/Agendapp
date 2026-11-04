@@ -1,5 +1,6 @@
+import { Pressable } from "./Pressable";
 import React, { useState, useEffect } from "react";
-import { Pressable, Text, TextInput, View, Switch } from "react-native";
+import { Text, TextInput, View, Switch } from "react-native";
 import { useTheme } from "./theme";
 import { Licenses } from "./Licenses";
 import { CategoryTag } from "./CategoryTag";

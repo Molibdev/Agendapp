@@ -52,6 +52,7 @@ Las capturas de referencia también muestran funciones bancarias y cuotas que no
 - `npm test`: reglas existentes y gráfico acumulado (ingresos/transferencias excluidos, días sin gasto, año bisiesto y conservación del estado).
 - `npm run build:web` y `npm run test:web`: finanzas, edición, datos JSON, exportación, contraste y Agenda.
 - `npm run test:design:web`: diseños de 320/390/768/1280 px, temas, gráfico, cambio a febrero, búsqueda, filtros, separación de Perfil, relleno compacto y áreas táctiles.
+- `npm run test:interactions:web`: presión de botones, menú flotante, arrastre de paneles, campos de hora y diseño con altura reducida. Ver [interacciones y selectores](interactions-and-inputs.md).
 - `npm run test:branding:web`: inicio animado y con movimiento reducido, ubicación de la barra inferior y del +, doble toque del logo, versión, avisos compactos y transiciones interrumpidas.
 - `npm run test:accounts:web`: recuperación, confirmación, cierre, limpieza local y otras cuentas; respaldo diario y revisión/cancelación de copia Drive en Perfil, con servicios simulados.
 - `npm run test:ssr` y exportación Android: empaquetado con configuración Supabase y módulos nuevos.

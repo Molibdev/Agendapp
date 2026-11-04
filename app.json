@@ -17,17 +17,15 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.molibdev.agendapp"
+      "package": "com.molibdev.agendapp",
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/favicon.png"
     },
-    "scheme": [
-      "agendapp",
-      "qgasto"
-    ],
+    "scheme": ["agendapp", "qgasto"],
     "plugins": [
       "expo-router",
       "expo-sharing",
@@ -57,6 +55,23 @@
           "dark": {
             "image": "./assets/splash-icon.png",
             "backgroundColor": "#0d0c13"
+          }
+        }
+      ],
+      [
+        "@react-native-community/datetimepicker",
+        {
+          "android": {
+            "timePicker": {
+              "numbersSelectorColor": {
+                "light": "#7132c3",
+                "dark": "#7842d6"
+              },
+              "headerBackground": {
+                "light": "#7132c3",
+                "dark": "#7842d6"
+              }
+            }
           }
         }
       ]

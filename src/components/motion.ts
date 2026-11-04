@@ -1,24 +1,45 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { AccessibilityInfo, Animated, Easing, Platform } from "react-native";
-export function useReducedMotion() {
-  const [reduced, setReduced] = useState(true);
-  useEffect(() => {
-    let active = true;
+let reducedMotion = true;
+const motionListeners = new Set<() => void>();
+function subscribeMotion(listener: () => void) {
+  motionListeners.add(listener);
+  const update = (value: boolean) => {
+    reducedMotion = value;
+    motionListeners.forEach((fn) => fn());
+  };
+  if (motionListeners.size === 1) {
     void AccessibilityInfo.isReduceMotionEnabled()
-      .then((value) => {
-        if (active) setReduced(value);
-      })
+      .then(update)
       .catch(() => {});
-    const listener = AccessibilityInfo.addEventListener(
+    motionSubscription = AccessibilityInfo.addEventListener(
       "reduceMotionChanged",
-      setReduced,
+      update,
     );
-    return () => {
-      active = false;
-      listener.remove();
-    };
-  }, []);
-  return reduced;
+  }
+  return () => {
+    motionListeners.delete(listener);
+    if (!motionListeners.size) {
+      motionSubscription?.remove();
+      motionSubscription = undefined;
+    }
+  };
+}
+let motionSubscription:
+  | ReturnType<typeof AccessibilityInfo.addEventListener>
+  | undefined;
+export function useReducedMotion() {
+  return useSyncExternalStore(
+    subscribeMotion,
+    () => reducedMotion,
+    () => true,
+  );
 }
 export function useSectionTransition<T extends string>(initial: T) {
   const reduced = useReducedMotion(),

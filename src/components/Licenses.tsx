@@ -1,5 +1,6 @@
+import { Pressable } from "./Pressable";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import licenses from "../../assets/licenses.json";
 import { AppIcon } from "./AppIcon";
 import { useTheme } from "./theme";

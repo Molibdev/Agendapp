@@ -5,6 +5,7 @@
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "9.2.1",
     "@supabase/supabase-js": "^2.118.0",
     "@tanstack/react-query": "^5.105.0",
     "expo": "~58.0.22",
@@ -55,7 +56,8 @@
     "test:accounts:web": "node scripts/smoke-accounts.mjs",
     "check:public-key": "node scripts/check-public-client-key.mjs",
     "test:design:web": "node scripts/smoke-redesign.mjs",
-    "test:branding:web": "node scripts/smoke-branding.mjs"
+    "test:branding:web": "node scripts/smoke-branding.mjs",
+    "test:interactions:web": "node scripts/smoke-interactions.mjs"
   },
   "private": true,
   "allowScripts": {

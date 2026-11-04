@@ -1,9 +1,9 @@
+import { Pressable } from "./Pressable";
 import React, { useEffect, useRef, useId, useSyncExternalStore } from "react";
 import {
   AccessibilityInfo,
   Animated,
   Platform,
-  Pressable,
   Text,
   View,
 } from "react-native";
