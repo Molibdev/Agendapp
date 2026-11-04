@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="agendapp-title">
+  <title id="agendapp-title">Agendapp — Icono de agenda y finanzas</title>
+  <defs>
+    <mask id="agendapp-cutouts" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256" >
+      <rect x="0" y="0" width="256" height="256" fill="#fff"/>
+      <path d="M91 54v21 M165 54v21" fill="none" stroke="#000" stroke-width="14" stroke-linecap="round"/>
+      <path d="M79 184l41-77q8-16 16 0l41 77" fill="none" stroke="#000" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M101 153l19 16 31-33" fill="none" stroke="#000" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <rect x="24" y="24" width="208" height="208" rx="50" fill="#7842D6" mask="url(#agendapp-cutouts)"/>
+</svg>

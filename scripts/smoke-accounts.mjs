@@ -247,7 +247,9 @@ try {
   await field("Correo electrónico").fill(user.email);
   await button("Reenviar confirmación").click();
   await expect(
-    page.getByText(/^Si el correo corresponde a una cuenta que lo necesita/),
+    page.getByText(
+      /^Si el correo corresponde a una cuenta que lo necesita.*\.$/,
+    ),
   ).toBeVisible();
   await button("Olvidé mi contraseña").click();
   await expect.poll(() => recoverRedirect).not.toBe("");
@@ -285,7 +287,7 @@ try {
   await daily.click();
   await expect(daily).toBeChecked();
   await expect(
-    page.getByText("✓ Respaldo diario activado", { exact: true }),
+    page.getByText("Respaldo diario activado ✓", { exact: true }),
   ).toBeVisible();
   await button("Cerrar notificación").click();
   await daily.click();

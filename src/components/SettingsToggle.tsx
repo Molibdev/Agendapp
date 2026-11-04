@@ -1,12 +1,7 @@
 import { useEffect, useRef } from "react";
-import {
-  AccessibilityInfo,
-  Animated,
-  Platform,
-  Pressable,
-  View,
-} from "react-native";
+import { Animated, Easing, Platform, Pressable, View } from "react-native";
 import { AppIcon } from "./AppIcon";
+import { useReducedMotion } from "./motion";
 import { useTheme } from "./theme";
 export function SettingsToggle({
   open,
@@ -18,24 +13,22 @@ export function SettingsToggle({
   kind?: "settings" | "profile";
 }) {
   const { styles, colors } = useTheme(),
+    reduced = useReducedMotion(),
     progress = useRef(new Animated.Value(open ? 1 : 0)).current;
   useEffect(() => {
-    let live = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
-      if (!live) return;
-      if (reduce) progress.setValue(open ? 1 : 0);
-      else
-        Animated.timing(progress, {
-          toValue: open ? 1 : 0,
-          duration: 180,
-          useNativeDriver: Platform.OS !== "web",
-        }).start();
+    if (reduced) {
+      progress.setValue(open ? 1 : 0);
+      return;
+    }
+    const motion = Animated.timing(progress, {
+      toValue: open ? 1 : 0,
+      duration: 240,
+      easing: Easing.inOut(Easing.quad),
+      useNativeDriver: Platform.OS !== "web",
     });
-    return () => {
-      live = false;
-      progress.stopAnimation();
-    };
-  }, [open, progress]);
+    motion.start();
+    return () => motion.stop();
+  }, [open, progress, reduced]);
   return (
     <Pressable
       accessibilityRole="button"
@@ -56,12 +49,20 @@ export function SettingsToggle({
         style={{
           width: 34,
           height: 34,
-          borderRadius: 17,
-          backgroundColor: open ? colors.soft : "transparent",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
+        <Animated.View
+          style={{
+            position: "absolute",
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            backgroundColor: colors.soft,
+            opacity: progress,
+          }}
+        />
         <Animated.View
           style={{
             position: "absolute",
@@ -73,7 +74,7 @@ export function SettingsToggle({
               {
                 rotate: progress.interpolate({
                   inputRange: [0, 1],
-                  outputRange: ["0deg", "45deg"],
+                  outputRange: ["0deg", "25deg"],
                 }),
               },
             ],
@@ -88,7 +89,7 @@ export function SettingsToggle({
               {
                 rotate: progress.interpolate({
                   inputRange: [0, 1],
-                  outputRange: ["-45deg", "0deg"],
+                  outputRange: ["-25deg", "0deg"],
                 }),
               },
             ],

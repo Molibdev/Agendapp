@@ -1,4 +1,10 @@
-export type Feedback = { message: string; kind: "success" | "error" | "info" };
+export type Feedback = {
+  message: string;
+  kind: "success" | "error" | "info";
+  durationMs?: number;
+};
+export const feedbackText = (event: Feedback) =>
+  `${event.message} ${event.kind === "success" ? "✓" : event.kind === "error" ? "×" : "i"}`;
 const listeners = new Set<(event: Feedback) => void>();
 const recent = new Map<string, number>();
 const hosts = new Map<string, { priority: number; order: number }>();
@@ -39,6 +45,7 @@ export function notify(
   message: string,
   kind: Feedback["kind"] = "success",
   key?: string,
+  durationMs?: number,
 ) {
   if (!message) return;
   if (key) {
@@ -47,7 +54,11 @@ export function notify(
     recent.set(key, now);
     if (recent.size > 100) recent.delete(recent.keys().next().value!);
   }
-  const event = { message, kind };
+  const event: Feedback = {
+    message,
+    kind,
+    ...(durationMs === undefined ? {} : { durationMs }),
+  };
   // Keep the visible message stable during bursts; retain the latest waiting actions.
   const messages =
     snapshot.messages.length >= 4

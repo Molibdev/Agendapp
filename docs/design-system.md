@@ -22,7 +22,7 @@ La tipografía es Inter en pesos 400, 500, 600 y 700, incluida como recursos loc
 ## Navegación y pantallas
 
 - Encabezado con Agendapp, Perfil y Ajustes. Ambos accesos cambian suavemente a X; la X vuelve a Inicio. Se respeta reducir movimiento.
-- Pestañas superiores: Inicio, Cuentas, Actividad, Planes y Agenda. En anchos reducidos pueden desplazarse horizontalmente. El contenido vuelve arriba al cambiar de sección.
+- Barra inferior de iconos: Inicio, Cuentas, Actividad, Planes y Agenda. Conserva nombres accesibles y áreas táctiles de al menos 44 px sin mostrar etiquetas. El botón + queda 12 px por encima. El contenido vuelve arriba al cambiar de sección.
 - Inicio: patrimonio, ingresos/gastos, gráfico acumulado, medios de pago, tarjetas, efectivo, categorías, presupuestos y movimientos recientes. La composición se distribuye en columnas en pantallas amplias.
 - El gráfico utiliza exclusivamente gastos registrados en el mes consultado, sin transferencias ni ingresos. Tocar el gráfico muestra el acumulado y gasto de ese día. Los puntos vacíos conservan el acumulado; no se generan pronósticos. Se admite cambiar entre meses de distinta duración después de seleccionar un punto.
 - Cuentas: agrupación de tarjetas, bancos y efectivo, con representaciones visuales originales y metadatos reales. No se inventan números de tarjeta, marcas de pago ni conexiones bancarias. Los colores de emisor ayudan a distinguir cuentas registradas manualmente.
@@ -42,7 +42,7 @@ Las capturas de referencia también muestran funciones bancarias y cuotas que no
 
 1. Descarga la rama y ejecuta `npm ci`. La vinculación EAS de Agendapp ya está versionada (`owner: molibdev`, proyecto `d9ef7a8d-49d9-4544-8a72-f8336338eb35`) junto al plugin `expo-font`; no hace falta ejecutar `eas init` otra vez.
 2. Conserva tu `.env.local` UTF-8 con las claves públicas Supabase y `EXPO_PUBLIC_DRIVE_AUTOMATION_ENABLED=true`, ya configuradas. No subas ese archivo.
-3. Genera un nuevo cliente de desarrollo: `npm run build:android:dev`. Se agregaron `react-native-svg` y `expo-font`, por lo que el APK anterior puede no tener los módulos nativos necesarios. No es una publicación en Google Play.
+3. Genera un nuevo cliente de desarrollo: `npm run build:android:dev`. Los nuevos logos, iconos nativos y `expo-splash-screen` requieren reconstruir el APK, además de los módulos del rediseño (`react-native-svg` y `expo-font`). No es una publicación en Google Play.
 4. Instala el APK como actualización de Agendapp y ejecuta `npm run start:dev -- --clear` para cargar esta rama.
 5. Comprueba ambos temas, tamaños de letra de Android, navegación, cuenta, Drive, finanzas, edición y recordatorios. La compilación y la entrega real necesitan el teléfono y tu cuenta EAS; las pruebas de este entorno no sustituyen esa revisión.
 
@@ -52,6 +52,7 @@ Las capturas de referencia también muestran funciones bancarias y cuotas que no
 - `npm test`: reglas existentes y gráfico acumulado (ingresos/transferencias excluidos, días sin gasto, año bisiesto y conservación del estado).
 - `npm run build:web` y `npm run test:web`: finanzas, edición, datos JSON, exportación, contraste y Agenda.
 - `npm run test:design:web`: diseños de 320/390/768/1280 px, temas, gráfico, cambio a febrero, búsqueda, filtros, separación de Perfil, relleno compacto y áreas táctiles.
+- `npm run test:branding:web`: inicio animado y con movimiento reducido, ubicación de la barra inferior y del +, doble toque del logo, versión, avisos compactos y transiciones interrumpidas.
 - `npm run test:accounts:web`: recuperación, confirmación, cierre, limpieza local y otras cuentas; respaldo diario y revisión/cancelación de copia Drive en Perfil, con servicios simulados.
 - `npm run test:ssr` y exportación Android: empaquetado con configuración Supabase y módulos nuevos.
 

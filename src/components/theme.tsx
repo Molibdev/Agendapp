@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { Platform, StyleSheet, useColorScheme } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { DOCK_HEIGHT, DOCK_MARGIN } from "./layout";
 import { useFonts } from "expo-font";
 
 export const themeColors = (dark: boolean) =>
@@ -248,17 +249,24 @@ function build(dark: boolean, fonts: boolean) {
       color: c.text,
     },
     nav: {
-      backgroundColor: c.header,
-      borderBottomWidth: 1,
+      height: DOCK_HEIGHT,
+      marginHorizontal: 18,
+      marginBottom: DOCK_MARGIN,
+      padding: 8,
+      flexDirection: "row",
+      flexShrink: 0,
+      gap: 4,
+      backgroundColor: c.surface,
+      borderWidth: 1,
       borderColor: c.border,
+      borderRadius: 24,
     },
     navItem: {
-      minHeight: 44,
-      paddingHorizontal: 11,
-      paddingVertical: 11,
+      flex: 1,
+      minHeight: 48,
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: 22,
+      borderRadius: 18,
     },
     navActive: { backgroundColor: c.primary },
     navLabel: {

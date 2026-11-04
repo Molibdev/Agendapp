@@ -27,6 +27,7 @@ Stack: Expo 58, React Native 0.88, React 19.3, Expo Router, TypeScript, TanStack
 - **Agenda**: calendario mensual y franjas horarias de día/semana con eventos simultáneos y de varios días. Crear, editar y eliminar con confirmación; título, fechas y horas de inicio/fin, locación y descripción. Navegación al pasado/futuro y botón Hoy con el reloj local del teléfono.
 - Recordatorios locales de Agenda en Android, un día antes a la misma hora y/o al comenzar el evento. Se reprograman al editar y se cancelan al eliminar o cambiar de perfil. Requieren una nueva compilación Android y permiso de notificaciones.
 - Avisos flotantes para cambios guardados, sincronización, exportaciones y errores; cola compartida entre pantallas y editores, colores según el tema y cierre accesible.
+- Marca violeta renovada, iconos nativos e inicio animado breve; navegación inferior solo con iconos y botón + separado. El doble toque del logo muestra créditos y versión (0.9.0).
 - Ajustes desde el icono del encabezado: transición suave entre engranaje y X; la X vuelve a Inicio. Respeta la preferencia del sistema de reducir movimiento.
 - Ajustes: apariencia, copias locales y categorías de gasto personalizadas. Perfil, desde el icono de usuario junto al engranaje: cuenta, sincronización y Google Drive, con paneles compactos y confirmación de restauración propia.
 - Calendario móvil desplazable, adaptado al alto disponible, con selección y día actual destacados. Colores y contornos con mayor contraste en ambos temas.
@@ -55,7 +56,7 @@ Las pruebas cubren reglas financieras, edición de movimientos, categorías, des
 
 Más detalles: [arquitectura](docs/architecture.md). La especificación adjunta original contiene tres páginas de resumen y referencia una especificación extensa y un Excel no adjuntados.
 
-La marca visible es Agendapp. El paquete npm y el slug de Expo usan `agendapp`. Se admiten los enlaces `agendapp://` y `qgasto://`; se mantienen las claves internas de almacenamiento, respaldo y Drive para conservar datos, sesiones, enlaces y copias anteriores. Los iconos reproducen en vector el símbolo del logo proporcionado. Los iconos y el nombre nativo requieren una nueva compilación de la app instalada.
+La marca visible es Agendapp. El paquete npm y el slug de Expo usan `agendapp`. Se admiten los enlaces `agendapp://` y `qgasto://`; se mantienen las claves internas de almacenamiento, respaldo y Drive para conservar datos, sesiones, enlaces y copias anteriores. Los recursos de marca incluyen variantes claras/oscuras y fuentes SVG. Los iconos y el inicio nativo requieren una nueva compilación de la app instalada. Ver [marca e inicio](docs/branding-and-navigation.md).
 
 El repositorio está en `Molibdev/Agendapp`. Los checkouts que conserven el remoto anterior pueden actualizarlo con `git remote set-url origin https://github.com/Molibdev/Agendapp.git`.
 

@@ -70,16 +70,16 @@ try {
   await button("Guardar evento").click();
   await expect(edit("Planificación")).toBeVisible();
   await expect(
-    page.getByText(/^i Las preferencias se guardarán/),
+    page.getByText(/^Las preferencias se guardarán.* i$/),
   ).toBeVisible();
   await button("Cerrar notificación").click();
   await expect(
-    page.getByText("✓ Evento creado", { exact: true }),
+    page.getByText("Evento creado ✓", { exact: true }),
   ).toBeVisible();
   await edit("Planificación").click();
   await expect(button("Cerrar notificación")).toHaveCount(1);
   await expect(
-    page.getByText("✓ Evento creado", { exact: true }),
+    page.getByText("Evento creado ✓", { exact: true }),
   ).toBeVisible();
   await page.waitForTimeout(400);
   await page.screenshot({ path: "/tmp/agendapp-feedback-editor.png" });

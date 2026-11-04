@@ -180,7 +180,11 @@ try {
     mimeType: "application/json",
     buffer: Buffer.from("{}"),
   });
-  await page.getByText(/^Copia inválida o incompatible/).waitFor();
+  await page
+    .getByText("Copia inválida o incompatible. No se modificaron tus datos.", {
+      exact: true,
+    })
+    .waitFor();
   assert.equal(await button("Confirmar restauración").count(), 0);
   const chooser = page.waitForEvent("filechooser");
   await button("Cargar copia de seguridad").click();

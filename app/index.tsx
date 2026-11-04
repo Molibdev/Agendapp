@@ -2,9 +2,7 @@ import { FloatingFeedback } from "../src/components/FloatingFeedback";
 import React, { useState, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
-  Image,
   Animated,
-  AccessibilityInfo,
   Modal,
   Platform,
   Pressable,
@@ -42,6 +40,9 @@ import { CategoryTag } from "../src/components/CategoryTag";
 import { AccountCard } from "../src/components/AccountCard";
 import { Overview } from "../src/components/Overview";
 import { CategoryBreakdown } from "../src/components/SpendingCard";
+import { BrandButton } from "../src/components/BrandButton";
+import { useSectionTransition } from "../src/components/motion";
+import { ACTION_BOTTOM, ACTION_SIZE } from "../src/components/layout";
 import { SettingsToggle } from "../src/components/SettingsToggle";
 import { AgendaNotifications } from "../src/components/AgendaNotifications";
 import { notify } from "../src/data/feedback";
@@ -210,32 +211,19 @@ export default function Home() {
     logout,
   } = useFinance();
   const contentScroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
-  const navigationScroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
-  const fade = useRef(new Animated.Value(1)).current;
-  const [tab, setTab] = useState<Tab>("Inicio");
+  const {
+    current: tab,
+    selected: activeTab,
+    navigate,
+    style: sectionStyle,
+  } = useSectionTransition<Tab>("Inicio");
   const [search, setSearch] = useState("");
   const [activityFilter, setActivityFilter] = useState<
     "all" | "income" | "expense"
   >("all");
   useEffect(() => {
     contentScroll.current?.scrollTo({ y: 0, animated: false });
-    if (tab === "Inicio")
-      navigationScroll.current?.scrollTo({ x: 0, animated: false });
-    let cancelled = false;
-    void AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
-      if (cancelled || reduce) return;
-      fade.setValue(0.3);
-      Animated.timing(fade, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: Platform.OS !== "web",
-      }).start();
-    });
-    return () => {
-      cancelled = true;
-      fade.stopAnimation();
-    };
-  }, [tab, fade]);
+  }, [tab]);
   const [form, setForm] = useState<Form | null>(null);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -596,74 +584,32 @@ export default function Home() {
       />
       <View style={styles.shell}>
         <View style={[styles.header, { paddingVertical: 8 }]}>
-          <View>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 7 }}
-            >
-              <Image
-                source={require("../assets/agendapp-mark.png")}
-                accessibilityLabel="Logo de Agendapp"
-                style={{ width: 28, height: 28 }}
-              />
-              <Text style={[styles.logo, { fontSize: 22 }]}>Agendapp</Text>
-            </View>
-          </View>
+          <BrandButton />
           <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
             <SettingsToggle
               kind="profile"
-              open={tab === "Perfil"}
-              onPress={() => setTab(tab === "Perfil" ? "Inicio" : "Perfil")}
+              open={activeTab === "Perfil"}
+              onPress={() =>
+                navigate(activeTab === "Perfil" ? "Inicio" : "Perfil")
+              }
             />
             <SettingsToggle
-              open={tab === "Ajustes"}
-              onPress={() => setTab(tab === "Ajustes" ? "Inicio" : "Ajustes")}
+              open={activeTab === "Ajustes"}
+              onPress={() =>
+                navigate(activeTab === "Ajustes" ? "Inicio" : "Ajustes")
+              }
             />
           </View>
-        </View>
-        <View
-          style={styles.nav}
-          accessibilityRole="tablist"
-          accessibilityLabel="Secciones principales"
-        >
-          <ScrollView
-            ref={navigationScroll}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: 16,
-              paddingVertical: 9,
-              gap: 3,
-              flexGrow: 1,
-              justifyContent: width >= 600 ? "center" : "space-between",
-            }}
-          >
-            {(
-              ["Inicio", "Cuentas", "Actividad", "Planes", "Agenda"] as Tab[]
-            ).map((t) => (
-              <Pressable
-                key={t}
-                accessibilityRole="tab"
-                accessibilityLabel={t}
-                accessibilityState={{ selected: t === tab }}
-                aria-selected={t === tab}
-                onPress={() => setTab(t)}
-                style={[styles.navItem, tab === t && styles.navActive]}
-              >
-                <Text
-                  style={[styles.navLabel, tab === t && { color: "#ffffff" }]}
-                >
-                  {t}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
         </View>
         <ScrollView
           ref={contentScroll}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.View style={{ gap: 22, opacity: fade }}>
+          <Animated.View
+            testID="section-content"
+            style={[{ gap: 22 }, sectionStyle]}
+          >
             <View style={styles.sectionHead}>
               <View style={{ gap: 7, flexShrink: 1 }}>
                 <Text style={styles.eyebrow}>
@@ -714,7 +660,7 @@ export default function Home() {
                   <Text style={styles.section}>Últimos movimientos</Text>
                   <Pressable
                     accessibilityRole="button"
-                    onPress={() => setTab("Actividad")}
+                    onPress={() => navigate("Actividad")}
                     style={{ minHeight: 44, justifyContent: "center" }}
                   >
                     <Text style={styles.link}>Ver todos →</Text>
@@ -1236,29 +1182,65 @@ export default function Home() {
             <Text style={styles.footer}>AGENDAPP</Text>
           </Animated.View>
         </ScrollView>
-        {(tab === "Inicio" || tab === "Actividad") && s.accounts.length > 0 && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Registrar gasto"
-            onPress={() => open("expense")}
-            style={[
-              styles.button,
-              {
-                position: "absolute",
-                bottom: 20,
-                right: 20,
-                width: 54,
-                height: 54,
-                borderRadius: 18,
-                padding: 0,
-                boxShadow: "0 5px 20px #7132c34d",
-                elevation: 7,
-              },
-            ]}
-          >
-            <AppIcon name="plus" size={26} color="#ffffff" />
-          </Pressable>
-        )}
+        <View
+          testID="bottom-navigation"
+          style={[
+            styles.nav,
+            width >= 600 && { width: 480, alignSelf: "center" },
+          ]}
+          accessibilityRole="tablist"
+          accessibilityLabel="Secciones principales"
+        >
+          {(
+            [
+              ["Inicio", "home"],
+              ["Cuentas", "wallet"],
+              ["Actividad", "transfer"],
+              ["Planes", "target"],
+              ["Agenda", "calendar"],
+            ] as const
+          ).map(([name, icon]) => (
+            <Pressable
+              key={name}
+              accessibilityRole="tab"
+              accessibilityLabel={name}
+              accessibilityState={{ selected: activeTab === name }}
+              aria-selected={activeTab === name}
+              onPress={() => navigate(name)}
+              style={[styles.navItem, activeTab === name && styles.navActive]}
+            >
+              <AppIcon
+                name={icon}
+                size={23}
+                color={activeTab === name ? "#ffffff" : colors.muted}
+              />
+            </Pressable>
+          ))}
+        </View>
+        {(activeTab === "Inicio" || activeTab === "Actividad") &&
+          s.accounts.length > 0 && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Registrar gasto"
+              onPress={() => open("expense")}
+              style={[
+                styles.button,
+                {
+                  position: "absolute",
+                  bottom: ACTION_BOTTOM,
+                  right: 20,
+                  width: ACTION_SIZE,
+                  height: ACTION_SIZE,
+                  borderRadius: 18,
+                  padding: 0,
+                  boxShadow: "0 5px 20px #7132c34d",
+                  elevation: 7,
+                },
+              ]}
+            >
+              <AppIcon name="plus" size={26} color="#ffffff" />
+            </Pressable>
+          )}
       </View>
       <Modal
         visible={
@@ -1580,7 +1562,7 @@ export default function Home() {
                       disabled={busy || saving}
                       onPress={() => {
                         setForm(null);
-                        setTab("Ajustes");
+                        navigate("Ajustes");
                       }}
                     />
                   </View>

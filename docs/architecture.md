@@ -68,10 +68,12 @@ La migración `202611010003_account_details.sql` añade los metadatos a la tabla
 
 Los horarios se guardan como fecha/hora local (`YYYY-MM-DDTHH:mm`), sin conversión UTC, y se muestran usando el reloj y la zona horaria del dispositivo. Cambiar de zona conserva la hora local indicada en el evento. No se integra con el calendario del sistema ni se implementan zonas horarias por evento. El reloj se refresca cada minuto y al volver al primer plano. `AgendaNotifications` reconcilia las preferencias con `expo-notifications` en Android. Solicita permiso al guardar un evento con recordatorios, programa el día anterior a la misma hora y/o el inicio, y cancela solicitudes obsoletas al editar/eliminar/cambiar de perfil. Recalcula al volver al primer plano. El navegador conserva preferencias. La entrega nativa requiere una nueva compilación y está sujeta a las restricciones de Android.
 
-Ajustes está en el encabezado, con transición de 180 ms entre engranaje y X y soporte de movimiento reducido. La X vuelve a Inicio; Agenda forma parte de las cinco pestañas superiores. Se reinicia el desplazamiento al cambiar de sección.
+Ajustes y Perfil están en el encabezado, con transición de 240 ms entre sus iconos y X. El contenido sale en 80 ms y entra en 220 ms con un desplazamiento de 5 px; una nueva selección cancela la animación anterior. Se respeta reducir movimiento. La X vuelve a Inicio; Agenda forma parte de las cinco pestañas inferiores, representadas solo con iconos y nombres accesibles. Se reinicia el desplazamiento al cambiar de sección.
 
 `tests/agenda.test.ts` prueba validación, CRUD, superposiciones, medianoche, meses cortos, semanas, horario local/DST, migración de respaldos y transporte de sincronización simulado. `scripts/smoke-agenda.mjs` prueba los flujos reales de navegador con reloj y zona local controlados, persistencia, respaldos y ambos temas. Las exportaciones nativas validan los bundles, pero no sustituyen las pruebas en un teléfono físico.
 
 ## Avisos dentro de la app
 
 `feedback.ts` mantiene una cola compartida y elige el host visible entre la pantalla y los modales. Los cambios persistidos, la sincronización y las acciones de cuenta/Drive emiten avisos; no se muestran éxitos antes de guardar. `FloatingFeedback` usa el tema actual, aparece sobre la navegación inferior, permite cerrar el mensaje y respeta reducir movimiento. Los avisos de sincronización repetidos se deduplican.
+
+Los avisos usan texto de 13 px, ancho máximo de 360 px y el indicador de estado al final del mensaje. El cierre mantiene un área táctil de 44 px. `notify` admite una duración opcional para créditos extensos. Ver [marca e inicio](branding-and-navigation.md) para los recursos nativos y la animación inicial.

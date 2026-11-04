@@ -1,6 +1,6 @@
 {
   "name": "agendapp",
-  "version": "1.0.0",
+  "version": "0.9.0",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -19,6 +19,7 @@
     "expo-router": "~58.0.29",
     "expo-secure-store": "~58.0.2",
     "expo-sharing": "~58.0.21",
+    "expo-splash-screen": "~58.0.12",
     "expo-status-bar": "~58.0.4",
     "expo-web-browser": "~58.0.7",
     "lucide-react-native": "^1.67.0",
@@ -53,7 +54,11 @@
     "build:android:dev": "npx eas-cli@27.2.0 build --platform android --profile development",
     "test:accounts:web": "node scripts/smoke-accounts.mjs",
     "check:public-key": "node scripts/check-public-client-key.mjs",
-    "test:design:web": "node scripts/smoke-redesign.mjs"
+    "test:design:web": "node scripts/smoke-redesign.mjs",
+    "test:branding:web": "node scripts/smoke-branding.mjs"
   },
-  "private": true
+  "private": true,
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
 }

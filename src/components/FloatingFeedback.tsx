@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useId, useSyncExternalStore } from "react";
 import {
   AccessibilityInfo,
   Animated,
+  Platform,
   Pressable,
   Text,
   View,
@@ -9,10 +10,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   feedbackSnapshot,
+  feedbackText,
   subscribeFeedbackView,
   registerFeedbackHost,
   dismissFeedback,
 } from "../data/feedback";
+import { NOTICE_BOTTOM } from "./layout";
 import { AppIcon } from "./AppIcon";
 import { useTheme } from "./theme";
 export function FloatingFeedback({
@@ -46,10 +49,13 @@ export function FloatingFeedback({
         Animated.timing(opacity, {
           toValue: 1,
           duration: 160,
-          useNativeDriver: false,
+          useNativeDriver: Platform.OS !== "web",
         }).start();
     });
-    const timer = setTimeout(dismiss, current.kind === "error" ? 6500 : 4200);
+    const timer = setTimeout(
+      dismiss,
+      current.durationMs ?? (current.kind === "error" ? 6500 : 4200),
+    );
     return () => {
       live = false;
       clearTimeout(timer);
@@ -61,14 +67,15 @@ export function FloatingFeedback({
       pointerEvents="box-none"
       style={{
         position: "absolute",
-        bottom: insets.bottom + 88,
-        left: 16,
-        right: 16,
+        bottom: insets.bottom + NOTICE_BOTTOM,
+        left: 20,
+        right: 20,
         zIndex: 9999,
         alignItems: "center",
       }}
     >
       <Animated.View
+        testID="floating-feedback"
         pointerEvents="box-none"
         accessibilityRole="alert"
         accessibilityLiveRegion="polite"
@@ -76,25 +83,36 @@ export function FloatingFeedback({
           styles.card,
           {
             opacity,
-            maxWidth: 540,
+            maxWidth: 360,
             width: "100%",
-            padding: 14,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
             borderWidth: 1,
-            borderRadius: 18,
+            borderRadius: 14,
             borderColor:
               current.kind === "error" ? styles.error.color : styles.link.color,
             flexDirection: "row",
             alignItems: "center",
-            gap: 10,
-            elevation: 12,
-            boxShadow: "0 4px 20px #0003",
+            gap: 6,
+            elevation: 6,
+            boxShadow: "0 3px 12px #0003",
           },
         ]}
       >
         <Text
           pointerEvents="none"
-          style={[styles.body, { flex: 1, color: styles.cardTitle.color }]}
-        >{`${current.kind === "success" ? "✓" : current.kind === "error" ? "!" : "i"} ${current.message}`}</Text>
+          style={[
+            styles.body,
+            {
+              flex: 1,
+              color: styles.cardTitle.color,
+              fontSize: 13,
+              lineHeight: 18,
+            },
+          ]}
+        >
+          {feedbackText(current)}
+        </Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Cerrar notificación"
@@ -106,7 +124,7 @@ export function FloatingFeedback({
             justifyContent: "center",
           }}
         >
-          <AppIcon name="close" size={18} />
+          <AppIcon name="close" size={14} color={styles.muted.color} />
         </Pressable>
       </Animated.View>
     </View>
