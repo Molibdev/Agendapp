@@ -27,7 +27,7 @@ Stack: Expo 58, React Native 0.88, React 19.3, Expo Router, TypeScript, TanStack
 - **Agenda**: calendario mensual y franjas horarias de día/semana con eventos simultáneos y de varios días. Crear, editar y eliminar con confirmación; título, fechas y horas de inicio/fin, locación y descripción. Navegación al pasado/futuro y botón Hoy con el reloj local del teléfono.
 - Recordatorios locales de Agenda en Android, un día antes a la misma hora y/o al comenzar el evento. Se reprograman al editar y se cancelan al eliminar o cambiar de perfil. Requieren una nueva compilación Android y permiso de notificaciones.
 - Avisos flotantes para cambios guardados, sincronización, exportaciones y errores; cola compartida entre pantallas y editores, colores según el tema y cierre accesible.
-- Marca violeta renovada, iconos nativos e inicio animado breve; navegación inferior solo con iconos y botón + separado. El doble toque del logo muestra créditos y versión (0.9.0).
+- Marca violeta renovada, iconos nativos e inicio animado breve; navegación inferior solo con iconos y botón + separado. El doble toque del logo muestra créditos y versión (0.10.0).
 - Ajustes desde el icono del encabezado: transición suave entre engranaje y X; la X vuelve a Inicio. Respeta la preferencia del sistema de reducir movimiento.
 - Ajustes: apariencia, copias locales y categorías de gasto personalizadas. Perfil, desde el icono de usuario junto al engranaje: cuenta, sincronización y Google Drive, con paneles compactos y confirmación de restauración propia.
 - Calendario móvil desplazable, adaptado al alto disponible, con selección y día actual destacados. Colores y contornos con mayor contraste en ambos temas.
@@ -69,3 +69,5 @@ La validación de aislamiento entre usuarios se describe en [esta guía](docs/us
 El rediseño usa Inter, iconos Lucide, gráficos SVG y temas violeta claro/oscuro. Ver [sistema visual y prueba Android](docs/design-system.md). Para comprobar búsqueda, filtros, navegación de Perfil y diseños de 320 a 1280 px: `npm run test:design:web`, con el export web servido en el puerto 8081.
 
 Los botones incluyen respuesta de presión discreta; los menús emergentes permiten arrastrar su barra superior para cerrar y reservan espacio para teclado y navegación del sistema. La hora de Agenda usa un reloj nativo en Android y la fecha conserva su calendario independiente. Ver [interacciones y selectores](docs/interactions-and-inputs.md) y `npm run test:interactions:web`.
+
+Desde 0.10.0, Planes admite compras en cuotas con interés total opcional, cambio del número de pagos y pago anticipado. La Agenda tiene cuadrícula renovada y acción flotante. Consulta [funcionamiento, compatibilidad y pruebas](docs/installments-and-agenda.md). Actualiza todos tus dispositivos antes de crear cuotas.

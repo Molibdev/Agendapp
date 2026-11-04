@@ -88,6 +88,12 @@ export function createWorkbook(s: State, from: string, to: string) {
       "Próxima fecha",
       "Activo",
       "Nota",
+      "Precio compra CLP",
+      "Interés total CLP",
+      "Cuotas totales",
+      "Cuotas registradas",
+      "Pendiente CLP",
+      "Pago anticipado",
     ],
     ...s.recurring.map((r) => [
       r.id,
@@ -98,6 +104,16 @@ export function createWorkbook(s: State, from: string, to: string) {
       r.nextDate,
       r.active,
       r.note,
+      r.installments?.principal ?? "",
+      r.installments?.interest ?? "",
+      r.installments?.count ?? "",
+      r.installments?.paid ?? "",
+      r.installments
+        ? r.installments.principal +
+          r.installments.interest -
+          r.installments.paidAmount
+        : "",
+      r.installments?.settledAt ?? "",
     ]),
   ]);
   add("Metas", [

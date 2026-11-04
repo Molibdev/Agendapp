@@ -2,7 +2,13 @@ import { TimeField } from "./TimeField";
 import { Sheet } from "./Sheet";
 import { Pressable } from "./Pressable";
 import { FloatingFeedback } from "./FloatingFeedback";
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useImperativeHandle,
+  type Ref,
+} from "react";
 import {
   AppState,
   Modal,
@@ -38,10 +44,13 @@ const dateLabel = (day: string, options: Intl.DateTimeFormatOptions) =>
 const timeLabel = (event: AgendaEvent) =>
   `${event.startsAt.slice(11)} – ${event.endsAt.slice(11)}`;
 
+export type AgendaHandle = { create: () => void };
 export function Agenda({
+  createRef,
   events,
   save,
 }: {
+  createRef: Ref<AgendaHandle>;
   events: AgendaEvent[];
   save: (command: Command) => Promise<unknown>;
 }) {
@@ -186,6 +195,7 @@ export function Agenda({
       />
     </View>
   );
+  useImperativeHandle(createRef, () => ({ create: () => open() }));
   const days =
     mode === "day"
       ? [day]
@@ -204,12 +214,14 @@ export function Agenda({
     <View style={{ gap: 18 }}>
       <View style={styles.sectionHead}>
         <View style={{ gap: 5, flexShrink: 1 }}>
-          <Text style={styles.pageTitle}>Tu agenda</Text>
-          <Text style={styles.body}>
-            Tus días, con espacio para lo importante.
+          <Text style={styles.eyebrow}>TU AGENDA</Text>
+          <Text style={styles.pageTitle}>
+            {dateLabel(day, { month: "long", year: "numeric" }).replace(
+              /^./,
+              (c) => c.toUpperCase(),
+            )}
           </Text>
         </View>
-        {button("+ Evento", () => open())}
       </View>
       <View
         accessibilityLabel="Vista de la agenda"
@@ -284,7 +296,7 @@ export function Agenda({
                 })
               : mode === "week"
                 ? `${dateLabel(days[0], { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short", year: "numeric" })}`
-                : dateLabel(day, { month: "long", year: "numeric" })}
+                : "Calendario del mes"}
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -306,7 +318,7 @@ export function Agenda({
           ]}
         >
           {button("Hoy", () => setDay(localDay(new Date())), true)}
-          <DateField label="Ir a fecha" value={day} onChange={setDay} />
+          <DateField label="Ir a fecha" value={day} onChange={setDay} compact />
         </View>
       </View>
       {!!message && (
@@ -343,7 +355,8 @@ export function Agenda({
                     key={date}
                     style={{
                       width: "14.2857%",
-                      minHeight: wide ? 108 : 58,
+                      minHeight: wide ? 132 : 100,
+                      borderRightWidth: 1,
                       borderTopWidth: 1,
                       borderColor: styles.card.borderColor,
                       padding: 2,
@@ -359,7 +372,7 @@ export function Agenda({
                       style={[
                         {
                           alignItems: "center",
-                          minHeight: 52,
+                          minHeight: 44,
                           borderRadius: 16,
                           gap: 4,
                           justifyContent: "center",
@@ -394,36 +407,32 @@ export function Agenda({
                         {daily.length
                           ? wide
                             ? `${daily.length} evento${daily.length === 1 ? "" : "s"}`
-                            : "●".repeat(Math.min(3, daily.length))
+                            : `${daily.length} cita${daily.length === 1 ? "" : "s"}`
                           : " "}
                       </Text>
                     </Pressable>
-                    {wide &&
-                      daily.slice(0, 2).map((event) => (
-                        <Pressable
-                          key={event.id}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Editar evento: ${event.title}`}
-                          onPress={() => open(event)}
+                    {daily.slice(0, 2).map((event) => (
+                      <Pressable
+                        key={event.id}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Abrir evento del calendario: ${event.title}`}
+                        onPress={() => open(event)}
+                        style={[
+                          styles.secondary,
+                          { borderRadius: 6, marginTop: 3, padding: 4 },
+                        ]}
+                      >
+                        <Text
+                          numberOfLines={1}
                           style={[
-                            styles.secondary,
-                            { borderRadius: 6, marginTop: 3, padding: 4 },
+                            styles.muted,
+                            { color: styles.cardTitle.color, fontSize: 11 },
                           ]}
                         >
-                          <Text
-                            numberOfLines={1}
-                            style={[
-                              styles.muted,
-                              { color: styles.cardTitle.color, fontSize: 11 },
-                            ]}
-                          >
-                            {event.startsAt.slice(0, 10) < date
-                              ? "↳"
-                              : event.startsAt.slice(11)}{" "}
-                            {event.title}
-                          </Text>
-                        </Pressable>
-                      ))}
+                          {event.title}
+                        </Text>
+                      </Pressable>
+                    ))}
                   </View>
                 );
               })}

@@ -77,3 +77,7 @@ Ajustes y Perfil están en el encabezado, con transición de 240 ms entre sus ic
 `feedback.ts` mantiene una cola compartida y elige el host visible entre la pantalla y los modales. Los cambios persistidos, la sincronización y las acciones de cuenta/Drive emiten avisos; no se muestran éxitos antes de guardar. `FloatingFeedback` usa el tema actual, aparece sobre la navegación inferior, permite cerrar el mensaje y respeta reducir movimiento. Los avisos de sincronización repetidos se deduplican.
 
 Los avisos usan texto de 13 px, ancho máximo de 360 px y el indicador de estado al final del mensaje. El cierre mantiene un área táctil de 44 px. `notify` admite una duración opcional para créditos extensos. Ver [marca e inicio](branding-and-navigation.md) para los recursos nativos y la animación inicial.
+
+## Compras en cuotas (0.10.0)
+
+Los planes se guardan en `recurring` con discriminador `type: installment` y metadatos de precio, interés total, cantidad de cuotas, avance, importe cubierto y fecha de prepago. Los movimientos generados conservan `type: expense`. El discriminador impide que lectores anteriores ignoren los metadatos financieros. Se conserva el envelope versión 1 de Supabase y JSON; no cambia el servicio Drive. Ver [semántica de cuotas](installments-and-agenda.md).

@@ -1,3 +1,8 @@
+import {
+  installmentRemaining,
+  installmentProjection,
+  nextMonthly,
+} from "../src/domain/finance";
 import { Sheet } from "../src/components/Sheet";
 import { Pressable } from "../src/components/Pressable";
 import { FloatingFeedback } from "../src/components/FloatingFeedback";
@@ -46,7 +51,7 @@ import { ACTION_BOTTOM, ACTION_SIZE } from "../src/components/layout";
 import { SettingsToggle } from "../src/components/SettingsToggle";
 import { AgendaNotifications } from "../src/components/AgendaNotifications";
 import { notify } from "../src/data/feedback";
-import { Agenda } from "../src/components/Agenda";
+import { Agenda, type AgendaHandle } from "../src/components/Agenda";
 import { useAuth } from "../src/data/auth";
 import { exportExcel } from "../src/data/export";
 import {
@@ -67,6 +72,8 @@ type Form =
   | "income"
   | "expense"
   | "recurring"
+  | "installment-edit"
+  | "installment-settle"
   | "account"
   | "budget"
   | "goal"
@@ -75,7 +82,9 @@ type Form =
 const titles: Record<Form, string> = {
   income: "Nuevo ingreso",
   expense: "Nuevo gasto",
-  recurring: "Nuevo recurrente mensual",
+  recurring: "Nuevo pago mensual",
+  "installment-edit": "Editar cuotas",
+  "installment-settle": "Pagado con anterioridad",
   account: "Nueva cuenta",
   budget: "Presupuesto mensual",
   goal: "Nueva meta",
@@ -126,11 +135,13 @@ function Field({
   value,
   onChange,
   number = false,
+  signed = false,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   number?: boolean;
+  signed?: boolean;
 }) {
   const { styles } = useTheme();
   return (
@@ -139,13 +150,33 @@ function Field({
       <TextInput
         accessibilityLabel={label}
         value={value}
-        onChangeText={onChange}
-        keyboardType={number ? "numbers-and-punctuation" : "default"}
+        onChangeText={(text) => {
+          if (!number || (signed ? /^-?\d*$/ : /^\d*$/).test(text))
+            onChange(text);
+        }}
+        keyboardType={number ? "number-pad" : "default"}
+        inputMode={number ? "numeric" : "text"}
         style={styles.input}
         placeholderTextColor={styles.muted.color}
         selectionColor={styles.link.color}
         autoCapitalize="none"
       />
+      {number && signed && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Cambiar signo del saldo"
+          onPress={() =>
+            onChange(value.startsWith("-") ? value.slice(1) : "-" + value)
+          }
+          style={styles.chip}
+        >
+          <Text style={styles.link}>
+            {value.startsWith("-")
+              ? "Saldo negativo (deuda) · cambiar a positivo"
+              : "Cambiar a saldo negativo (deuda)"}
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -227,6 +258,11 @@ export default function Home() {
   const [form, setForm] = useState<Form | null>(null);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
+  const agendaRef = useRef<AgendaHandle>(null);
+  const [paymentType, setPaymentType] = useState("monthly");
+  const [installmentCount, setInstallmentCount] = useState("3");
+  const [interest, setInterest] = useState("0");
+  const [planId, setPlanId] = useState("");
   const [date, setDate] = useState(today());
   const [account, setAccount] = useState("");
   const [category, setCategory] = useState("");
@@ -252,6 +288,10 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const open = (f: Form) => {
     setForm(f);
+    setPaymentType("monthly");
+    setInstallmentCount("3");
+    setInterest("0");
+    setPlanId("");
     setDriveExport(null);
     setName("");
     setAmount("");
@@ -362,6 +402,19 @@ export default function Home() {
         setForm(null);
         return;
       }
+      if (form === "installment-edit") {
+        await commit({
+          kind: "resize-installments",
+          id: planId,
+          count: Number(installmentCount),
+          date: today(),
+        });
+        return;
+      }
+      if (form === "installment-settle") {
+        await commit({ kind: "settle-installments", id: planId, date });
+        return;
+      }
       if (!/^-?\d+$/.test(amount.trim()))
         throw new Error("Escribe un monto entero en CLP, sin puntos ni comas");
       const value = Number(amount);
@@ -434,7 +487,7 @@ export default function Home() {
             kind: "recurring",
             value: {
               id,
-              type: "expense",
+              type: paymentType === "installments" ? "installment" : "expense",
               accountId: account,
               categoryId: category,
               amount: value,
@@ -442,6 +495,17 @@ export default function Home() {
               nextDate: date,
               note,
               active: true,
+              ...(paymentType === "installments"
+                ? {
+                    installments: {
+                      principal: value,
+                      interest: Number(interest),
+                      count: Number(installmentCount),
+                      paid: 0,
+                      paidAmount: 0,
+                    },
+                  }
+                : {}),
             },
           });
           break;
@@ -610,16 +674,16 @@ export default function Home() {
             testID="section-content"
             style={[{ gap: 22 }, sectionStyle]}
           >
-            <View style={styles.sectionHead}>
-              <View style={{ gap: 7, flexShrink: 1 }}>
-                <Text style={styles.eyebrow}>
-                  {tab === "Inicio"
-                    ? "TU RESUMEN"
-                    : tab === "Perfil"
-                      ? "CUENTA Y NUBE"
-                      : tab.toUpperCase()}
-                </Text>
-                {tab !== "Agenda" && (
+            {tab !== "Agenda" && (
+              <View style={styles.sectionHead}>
+                <View style={{ gap: 7, flexShrink: 1 }}>
+                  <Text style={styles.eyebrow}>
+                    {tab === "Inicio"
+                      ? "TU RESUMEN"
+                      : tab === "Perfil"
+                        ? "CUENTA Y NUBE"
+                        : tab.toUpperCase()}
+                  </Text>
                   <Text style={styles.pageTitle}>
                     {tab === "Inicio"
                       ? "Tu dinero"
@@ -633,18 +697,18 @@ export default function Home() {
                               ? "Tu cuenta"
                               : "A tu manera"}
                   </Text>
+                </View>
+                {tab !== "Ajustes" && tab !== "Perfil" && (
+                  <DateField
+                    label="Mes consultado"
+                    value={month}
+                    onChange={setMonth}
+                    monthOnly
+                    compact
+                  />
                 )}
               </View>
-              {tab !== "Agenda" && tab !== "Ajustes" && tab !== "Perfil" && (
-                <DateField
-                  label="Mes consultado"
-                  value={month}
-                  onChange={setMonth}
-                  monthOnly
-                  compact
-                />
-              )}
-            </View>
+            )}
             {tab === "Inicio" && (
               <>
                 <Overview
@@ -655,6 +719,18 @@ export default function Home() {
                   onAccount={() => open("account")}
                   onEdit={editAccount}
                 />
+                <View style={[styles.card, { gap: 6 }]}>
+                  <Text style={styles.eyebrow}>
+                    CUOTAS PENDIENTES · {month}
+                  </Text>
+                  <Text style={styles.section}>
+                    {clp(installmentProjection(s, month))}
+                  </Text>
+                  <Text style={styles.muted}>
+                    Proyección del mes; no se suma a los gastos registrados
+                    hasta su vencimiento.
+                  </Text>
+                </View>
                 {plans}
                 <View style={styles.sectionHead}>
                   <Text style={styles.section}>Últimos movimientos</Text>
@@ -983,8 +1059,8 @@ export default function Home() {
                   />
                 </View>
                 <Text style={styles.muted}>
-                  Gastos mensuales que se registran al abrir la app. La fecha
-                  inicial define el día del mes.
+                  Pagos mensuales y compras en cuotas. Se registran al vencer,
+                  al abrir la app. La fecha inicial define el día del mes.
                 </Text>
                 <View
                   style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}
@@ -1045,7 +1121,12 @@ export default function Home() {
                               },
                             ]}
                           >
-                            {r.active ? "ACTIVO" : "EN PAUSA"}
+                            {r.installments?.paid === r.installments?.count &&
+                            r.installments
+                              ? "PAGADO"
+                              : r.active
+                                ? "ACTIVO"
+                                : "EN PAUSA"}
                           </Text>
                         </View>
                       </View>
@@ -1056,25 +1137,92 @@ export default function Home() {
                       <Text style={[styles.accountAmount, { fontSize: 21 }]}>
                         {clp(r.amount)}
                       </Text>
-                      <Text style={styles.muted}>Próximo: {r.nextDate}</Text>
-                      <Pressable
-                        accessibilityRole="button"
-                        onPress={() => {
-                          void save({
-                            kind: "toggle-recurring",
-                            id: r.id,
-                          }).catch((e) => notify(e.message, "error"));
-                        }}
-                        style={[styles.button, styles.secondary]}
-                      >
-                        <Text
-                          style={[styles.buttonText, { color: colors.accent }]}
+                      {r.installments ? (
+                        <>
+                          <Text style={styles.muted}>
+                            {r.installments.paid} de {r.installments.count}{" "}
+                            cuotas cubiertas
+                          </Text>
+                          <Text style={styles.body}>
+                            Pendiente:{" "}
+                            {clp(installmentRemaining(r.installments))}
+                          </Text>
+                          <Text style={styles.muted}>
+                            Interés total: {clp(r.installments.interest)}
+                          </Text>
+                        </>
+                      ) : null}
+                      {(!r.installments ||
+                        r.installments.paid < r.installments.count) && (
+                        <Text style={styles.muted}>Próximo: {r.nextDate}</Text>
+                      )}
+                      {r.installments &&
+                        r.installments.paid < r.installments.count && (
+                          <>
+                            <Button
+                              label="Editar cuotas"
+                              secondary
+                              onPress={() => {
+                                open("installment-edit");
+                                setPlanId(r.id);
+                                setInstallmentCount(
+                                  String(r.installments!.count),
+                                );
+                              }}
+                            />
+                            <Button
+                              label="Pagado con anterioridad"
+                              secondary
+                              onPress={() => {
+                                open("installment-settle");
+                                setPlanId(r.id);
+                              }}
+                            />
+                          </>
+                        )}
+                      {(!r.installments ||
+                        r.installments.paid < r.installments.count) && (
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => {
+                            void save({
+                              kind: "toggle-recurring",
+                              id: r.id,
+                            }).catch((e) => notify(e.message, "error"));
+                          }}
+                          style={[styles.button, styles.secondary]}
                         >
-                          {r.active ? "Pausar" : "Reanudar"}
-                        </Text>
-                      </Pressable>
+                          <Text
+                            style={[
+                              styles.buttonText,
+                              { color: colors.accent },
+                            ]}
+                          >
+                            {r.active ? "Pausar" : "Reanudar"}
+                          </Text>
+                        </Pressable>
+                      )}
                     </View>
                   ))}
+                </View>
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>Proyección de cuotas</Text>
+                  <Text style={styles.muted}>
+                    Solo cuotas pendientes de planes activos; no incluye pagos
+                    ya registrados.
+                  </Text>
+                  {Array.from({ length: 6 }, (_, i) => {
+                    let d = `${today().slice(0, 7)}-01`;
+                    for (let n = 0; n < i; n++) d = nextMonthly(d, d);
+                    return (
+                      <View key={d} style={styles.row}>
+                        <Text style={styles.body}>{d.slice(0, 7)}</Text>
+                        <Text style={styles.cardTitle}>
+                          {clp(installmentProjection(s, d.slice(0, 7)))}
+                        </Text>
+                      </View>
+                    );
+                  })}
                 </View>
                 {!s.recurring.length && (
                   <View style={[styles.card, { alignItems: "flex-start" }]}>
@@ -1161,6 +1309,7 @@ export default function Home() {
             )}
             {tab === "Agenda" && (
               <Agenda
+                createRef={agendaRef}
                 key={session?.user.id ?? "guest"}
                 events={s.events}
                 save={save}
@@ -1247,6 +1396,29 @@ export default function Home() {
               <AppIcon name="plus" size={26} color="#ffffff" />
             </Pressable>
           )}
+        {tab === "Agenda" && activeTab === "Agenda" && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Crear evento"
+            onPress={() => agendaRef.current?.create()}
+            style={[
+              styles.button,
+              {
+                position: "absolute",
+                bottom: ACTION_BOTTOM,
+                right: 20,
+                width: ACTION_SIZE,
+                height: ACTION_SIZE,
+                borderRadius: 18,
+                padding: 0,
+                elevation: 7,
+                boxShadow: "0 5px 20px #7132c34d",
+              },
+            ]}
+          >
+            <AppIcon name="calendarPlus" size={25} color="#ffffff" />
+          </Pressable>
+        )}
       </View>
       <Modal
         visible={
@@ -1288,6 +1460,85 @@ export default function Home() {
                 <AppIcon name="close" />
               </Pressable>
             </View>
+            {form === "recurring" && (
+              <>
+                <Choices
+                  label="Tipo de pago"
+                  options={[
+                    { id: "monthly", name: "Mensual sin término" },
+                    { id: "installments", name: "Compra en cuotas" },
+                  ]}
+                  value={paymentType}
+                  onChange={setPaymentType}
+                />
+                {paymentType === "installments" && (
+                  <>
+                    <Field
+                      label="Número de cuotas"
+                      number
+                      value={installmentCount}
+                      onChange={setInstallmentCount}
+                    />
+                    <Field
+                      label="Interés total CLP (0 sin interés)"
+                      number
+                      value={interest}
+                      onChange={setInterest}
+                    />
+                    <Text style={styles.muted}>
+                      El monto es el precio total de compra, no el valor de una
+                      cuota. El interés es el total acordado en CLP, no una tasa
+                      mensual. Las cuotas empiezan en la fecha elegida.
+                    </Text>
+                    <Text style={styles.cardTitle}>
+                      Total a financiar:{" "}
+                      {clp(Number(amount || 0) + Number(interest || 0))}
+                    </Text>
+                  </>
+                )}
+              </>
+            )}
+            {form === "installment-edit" && (
+              <>
+                <Text style={styles.body}>
+                  Cambia el número total de cuotas. Se conserva lo registrado y
+                  el saldo pendiente se reparte en los pagos restantes, sin
+                  cambiar el interés total.
+                </Text>
+                <Field
+                  label="Número total de cuotas"
+                  number
+                  value={installmentCount}
+                  onChange={setInstallmentCount}
+                />
+              </>
+            )}
+            {form === "installment-settle" && (
+              <>
+                <Text style={styles.body}>
+                  Se registrarán primero los vencimientos pendientes hasta la
+                  fecha elegida. El saldo restante se agregará como un único
+                  gasto y se cancelarán las cuotas futuras. Incluye el interés
+                  total acordado, sin calcular descuentos del banco.
+                </Text>
+                <Text style={styles.cardTitle}>
+                  Pendiente actual:{" "}
+                  {clp(
+                    installmentRemaining(
+                      s.recurring.find((r) => r.id === planId)!.installments!,
+                    ),
+                  )}
+                </Text>
+                <DateField
+                  label="Fecha del pago anticipado"
+                  value={date}
+                  onChange={setDate}
+                />
+                <Text style={styles.muted}>
+                  Pulsa Confirmar pago anticipado solo si ya pagaste este saldo.
+                </Text>
+              </>
+            )}
             {(form === "account" || form === "goal") && (
               <Field
                 label={form === "account" ? "Nombre de la cuenta" : "Nombre"}
@@ -1408,20 +1659,26 @@ export default function Home() {
                 onChange={setGoal}
               />
             )}
-            {form !== "export" && !(form === "account" && editing) && (
-              <Field
-                label={
-                  form === "account"
-                    ? "Saldo inicial CLP (negativo si es deuda)"
-                    : form === "goal"
-                      ? "Objetivo CLP"
-                      : "Monto CLP (sin separadores)"
-                }
-                number
-                value={amount}
-                onChange={setAmount}
-              />
-            )}
+            {form !== "export" &&
+              form !== "installment-edit" &&
+              form !== "installment-settle" &&
+              !(form === "account" && editing) && (
+                <Field
+                  label={
+                    form === "account"
+                      ? "Saldo inicial CLP (negativo si es deuda)"
+                      : form === "recurring" && paymentType === "installments"
+                        ? "Precio total de compra CLP"
+                        : form === "goal"
+                          ? "Objetivo CLP"
+                          : "Monto CLP (sin separadores)"
+                  }
+                  number
+                  signed={form === "account"}
+                  value={amount}
+                  onChange={setAmount}
+                />
+              )}
             {form === "budget" && (
               <DateField
                 label="Mes del presupuesto"
@@ -1492,9 +1749,11 @@ export default function Home() {
                 label={
                   busy || saving
                     ? "Guardando…"
-                    : form === "export"
-                      ? "Generar y compartir XLSX"
-                      : "Guardar"
+                    : form === "installment-settle"
+                      ? "Confirmar pago anticipado"
+                      : form === "export"
+                        ? "Generar y compartir XLSX"
+                        : "Guardar"
                 }
                 disabled={busy || saving}
                 onPress={() => {

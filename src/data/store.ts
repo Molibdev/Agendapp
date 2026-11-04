@@ -157,7 +157,9 @@ export function useFinance() {
           budget: "Presupuesto guardado",
           goal: "Meta creada",
           contribution: "Aporte guardado",
-          recurring: "Recurrente guardado",
+          recurring: "Pago mensual guardado",
+          "resize-installments": "Cuotas actualizadas",
+          "settle-installments": "Pago anticipado registrado",
           "toggle-recurring": "Recurrente actualizado",
           "process-recurring": "Movimientos recurrentes registrados",
         };

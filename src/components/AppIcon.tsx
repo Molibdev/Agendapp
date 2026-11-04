@@ -31,7 +31,9 @@ import FoodIcon from "lucide-react-native/icons/utensils";
 import WalletIcon from "lucide-react-native/icons/wallet";
 import CloseIcon from "lucide-react-native/icons/x";
 import ClockIcon from "lucide-react-native/icons/clock";
+import CalendarPlusIcon from "lucide-react-native/icons/calendar-plus";
 const icons = {
+  calendarPlus: CalendarPlusIcon,
   clock: ClockIcon,
   activity: ActivityIcon,
   income: IncomeIcon,

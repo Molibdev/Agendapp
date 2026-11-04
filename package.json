@@ -1,6 +1,6 @@
 {
   "name": "agendapp",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -47,7 +47,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx tests/finance.test.ts && node --import tsx tests/backup.test.ts && node --import tsx tests/sync.test.ts && node --import tsx tests/accounts.test.ts && node --import tsx tests/agenda.test.ts && node --import tsx tests/drive.test.ts && node --import tsx tests/account.test.ts && node --import tsx tests/automation.test.ts && node --import tsx tests/driveService.test.ts && node --import tsx tests/insights.test.ts",
+    "test": "node --import tsx tests/finance.test.ts && node --import tsx tests/backup.test.ts && node --import tsx tests/sync.test.ts && node --import tsx tests/accounts.test.ts && node --import tsx tests/agenda.test.ts && node --import tsx tests/drive.test.ts && node --import tsx tests/account.test.ts && node --import tsx tests/automation.test.ts && node --import tsx tests/driveService.test.ts && node --import tsx tests/insights.test.ts && node --import tsx tests/installments.test.ts",
     "build:web": "expo export --platform web",
     "test:web": "node scripts/smoke-web.mjs && node scripts/smoke-agenda.mjs",
     "test:ssr": "node scripts/check-web-ssr.mjs",
@@ -57,7 +57,8 @@
     "check:public-key": "node scripts/check-public-client-key.mjs",
     "test:design:web": "node scripts/smoke-redesign.mjs",
     "test:branding:web": "node scripts/smoke-branding.mjs",
-    "test:interactions:web": "node scripts/smoke-interactions.mjs"
+    "test:interactions:web": "node scripts/smoke-interactions.mjs",
+    "test:installments:web": "node scripts/smoke-installments.mjs"
   },
   "private": true,
   "allowScripts": {

@@ -193,6 +193,7 @@ export function CalendarContent() {
             maxLength={4}
             style={[styles.input, { width: 100 }]}
             onChangeText={(v) => {
+              if (!/^\d*$/.test(v)) return;
               setYear(v);
               if (/^\d{4}$/.test(v) && Number(v) >= 1900 && Number(v) <= 2100)
                 setCursor(`${v}-${String(m).padStart(2, "0")}`);

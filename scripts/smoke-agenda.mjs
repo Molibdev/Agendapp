@@ -51,7 +51,7 @@ try {
   await expect(page.getByText("TU RESUMEN", { exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "Agenda", exact: true }).click();
   await expect(button("Ir a fecha")).toContainText("02 / 11 / 2026");
-  await button("+ Evento").click();
+  await button("Crear evento").click();
   await button("Guardar evento").click();
   await expect(
     page.getByText("Escribe un título para el evento.", { exact: true }),
@@ -122,7 +122,7 @@ try {
   await button("Cancelar evento").click();
   await expect(edit("Planificación futura")).toHaveCount(1);
   await button("Vista mes").click();
-  await button("+ Evento").click();
+  await button("Crear evento").click();
   await field("Título del evento").fill("Turno nocturno");
   await field("Hora de inicio").fill("23:00");
   await date("Fecha de fin", "2027-11-06");

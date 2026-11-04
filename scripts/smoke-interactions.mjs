@@ -94,7 +94,7 @@ try {
   await drag(155, true);
   await expect(panel()).toHaveCount(0);
   await tab("Agenda").click();
-  await button("+ Evento").click();
+  await button("Crear evento").click();
   await page
     .getByLabel("Título del evento", { exact: true })
     .fill("Borrador conservado");

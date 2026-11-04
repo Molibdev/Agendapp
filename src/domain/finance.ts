@@ -58,14 +58,53 @@ export const contributionSchema = z.object({
   amount: amountSchema,
   date: dateSchema,
 });
+export const installmentSchema = z
+  .object({
+    principal: amountSchema,
+    interest: z.number().int().min(0).max(1e12),
+    count: z.number().int().min(1).max(600),
+    paid: z.number().int().min(0).max(600),
+    paidAmount: z.number().int().min(0).max(1e12),
+    settledAt: dateSchema.optional(),
+  })
+  .refine(
+    (p) =>
+      p.principal + p.interest <= 1e12 &&
+      p.paid <= p.count &&
+      p.paidAmount <= p.principal + p.interest &&
+      (p.paid === 0 ? p.paidAmount === 0 : p.paidAmount > 0) &&
+      (p.paid === p.count
+        ? p.paidAmount === p.principal + p.interest
+        : p.principal + p.interest - p.paidAmount >= p.count - p.paid) &&
+      (!p.settledAt || p.paid === p.count),
+    "Plan de cuotas incompatible",
+  );
+export type Installments = z.infer<typeof installmentSchema>;
+export const installmentTotal = (p: Installments) => p.principal + p.interest;
+export const installmentRemaining = (p: Installments) =>
+  installmentTotal(p) - p.paidAmount;
+export const nextInstallmentAmount = (p: Installments) =>
+  p.paid === p.count
+    ? 0
+    : Math.ceil(installmentRemaining(p) / (p.count - p.paid));
 export const recurringSchema = transactionSchema
-  .omit({ id: true, date: true })
+  .omit({ id: true, date: true, type: true })
   .extend({
     id: z.string().min(1),
     startDate: dateSchema,
     nextDate: dateSchema,
     active: z.boolean(),
-  });
+    installments: installmentSchema.optional(),
+    type: z.enum(["expense", "income", "installment"]),
+  })
+  .refine(
+    (r) =>
+      (!r.installments && r.type !== "installment") ||
+      (r.type === "installment" &&
+        !!r.installments &&
+        (r.installments.paid < r.installments.count || !r.active)),
+    "Revisa el estado del plan",
+  );
 export const stateSchema = z.object({
   version: z.literal(1),
   events: z.array(agendaEventSchema).default([]),
@@ -86,6 +125,8 @@ export type Command =
   | { kind: "delete-event"; id: string }
   | { kind: "recurring"; value: z.infer<typeof recurringSchema> }
   | { kind: "toggle-recurring"; id: string }
+  | { kind: "resize-installments"; id: string; count: number; date: string }
+  | { kind: "settle-installments"; id: string; date: string }
   | { kind: "process-recurring"; date: string }
   | { kind: "account"; value: Account }
   | { kind: "update-account"; value: Account }
@@ -217,23 +258,126 @@ export function apply(s: State, c: Command): State {
     case "recurring": {
       const r = recurringSchema.parse(c.value);
       account(r.accountId);
+      if (s.recurring.some((x) => x.id === r.id && x.installments))
+        throw new Error("Usa Editar cuotas para modificar un plan existente");
+      if (
+        r.installments &&
+        (r.nextDate !== r.startDate ||
+          r.installments.paid !== 0 ||
+          r.installments.paidAmount !== 0 ||
+          r.installments.settledAt ||
+          s.transactions.some(
+            (t) =>
+              t.id.startsWith(`recurring:${r.id}:`) ||
+              t.id === `installment-settle:${r.id}`,
+          ))
+      )
+        throw new Error("Un nuevo plan debe comenzar sin cuotas registradas");
       if (
         r.nextDate < r.startDate ||
-        !s.categories.some((x) => x.id === r.categoryId && x.type === r.type)
+        !s.categories.some(
+          (x) =>
+            x.id === r.categoryId &&
+            x.type === (r.type === "installment" ? "expense" : r.type),
+        )
       )
         throw new Error("Revisa la fecha y categoría del recurrente");
       return {
         ...s,
-        recurring: [...s.recurring.filter((x) => x.id !== r.id), r],
+        recurring: [
+          ...s.recurring.filter((x) => x.id !== r.id),
+          {
+            ...r,
+            amount: r.installments
+              ? nextInstallmentAmount(r.installments)
+              : r.amount,
+          },
+        ],
       };
     }
     case "toggle-recurring":
       return {
         ...s,
         recurring: s.recurring.map((r) =>
-          r.id === c.id ? { ...r, active: !r.active } : r,
+          r.id === c.id &&
+          (!r.installments || r.installments.paid < r.installments.count)
+            ? { ...r, active: !r.active }
+            : r,
         ),
       };
+    case "resize-installments":
+    case "settle-installments": {
+      dateSchema.parse(c.date);
+      const old = s.recurring.find((r) => r.id === c.id);
+      if (!old?.installments) throw new Error("Plan de cuotas no encontrado");
+      if (old.installments.paid === old.installments.count) return s;
+      const related = s.transactions.filter((t) =>
+        t.id.startsWith(`recurring:${c.id}:`),
+      );
+      if (related.some((t) => t.date > c.date))
+        throw new Error("La fecha no puede preceder cuotas ya registradas");
+      const updated = processRecurring(s, c.date);
+      const rule = updated.recurring.find((r) => r.id === c.id)!;
+      const p = rule.installments!;
+      if (p.paid === p.count) return updated;
+      if (c.kind === "resize-installments") {
+        if (
+          !Number.isInteger(c.count) ||
+          c.count <= p.paid ||
+          c.count > 600 ||
+          c.count - p.paid > installmentRemaining(p)
+        )
+          throw new Error(
+            "El total de cuotas debe superar las registradas, hasta 600, con al menos $1 por cuota",
+          );
+        const plan = installmentSchema.parse({ ...p, count: c.count });
+        return {
+          ...updated,
+          recurring: updated.recurring.map((r) =>
+            r.id === c.id
+              ? {
+                  ...r,
+                  installments: plan,
+                  amount: nextInstallmentAmount(plan),
+                }
+              : r,
+          ),
+        };
+      }
+      account(rule.accountId);
+      const paidState = apply(updated, {
+        kind: "transaction",
+        value: {
+          id: `installment-settle:${c.id}`,
+          type: "expense",
+          accountId: rule.accountId,
+          categoryId: rule.categoryId,
+          amount: installmentRemaining(p),
+          date: c.date,
+          note: `Pago anticipado · ${rule.note || "Compra en cuotas"}`.slice(
+            0,
+            250,
+          ),
+        },
+      });
+      return {
+        ...paidState,
+        recurring: paidState.recurring.map((r) =>
+          r.id === c.id
+            ? {
+                ...r,
+                active: false,
+                installments: {
+                  ...p,
+                  paid: p.count,
+                  paidAmount: installmentTotal(p),
+                  settledAt: c.date,
+                },
+              }
+            : r,
+        ),
+      };
+    }
     case "process-recurring":
       return processRecurring(s, c.date);
 
@@ -283,6 +427,21 @@ export function apply(s: State, c: Command): State {
       if (c.kind === "update-transaction") {
         const old = s.transactions.find((x) => x.id === t.id);
         if (!old) throw new Error("Movimiento no encontrado");
+        const plan = s.recurring.find(
+          (r) =>
+            r.installments &&
+            (t.id.startsWith(`recurring:${r.id}:`) ||
+              t.id === `installment-settle:${r.id}`),
+        );
+        if (
+          plan &&
+          (old.amount !== t.amount ||
+            old.accountId !== t.accountId ||
+            old.date !== t.date)
+        )
+          throw new Error(
+            "Las cuotas registradas conservan monto, cuenta y fecha; edita solo su nota o categoría",
+          );
         if (old.type !== t.type)
           throw new Error("No se puede cambiar el tipo del movimiento");
         return {
@@ -353,17 +512,60 @@ export function processRecurring(state: State, through: string): State {
   const recurring = state.recurring.map((rule) => {
     let nextDate = rule.nextDate;
     let count = 0;
-    while (rule.active && nextDate <= through) {
+    let plan = rule.installments ? { ...rule.installments } : undefined;
+    while (
+      rule.active &&
+      (!plan || plan.paid < plan.count) &&
+      nextDate <= through
+    ) {
       if (++count > 1200)
         throw new Error("El recurrente supera 100 años de historial");
       const { id, startDate, active, ...t } = rule;
+      if (
+        plan &&
+        s.transactions.some((t) => t.id === `recurring:${id}:${nextDate}`)
+      )
+        throw new Error(
+          "El historial de cuotas requiere revisión; no se generaron cargos duplicados",
+        );
       s = apply(s, {
         kind: "transaction",
-        value: { ...t, id: `recurring:${id}:${nextDate}`, date: nextDate },
+        value: {
+          ...t,
+          type: rule.type === "installment" ? "expense" : rule.type,
+          id: `recurring:${id}:${nextDate}`,
+          date: nextDate,
+          amount: plan ? nextInstallmentAmount(plan) : rule.amount,
+          note: plan
+            ? `${rule.note || "Compra en cuotas"} · Cuota ${plan.paid + 1}/${plan.count}`.slice(
+                0,
+                250,
+              )
+            : rule.note,
+        },
       });
+      if (plan)
+        plan = {
+          ...plan,
+          paid: plan.paid + 1,
+          paidAmount: plan.paidAmount + nextInstallmentAmount(plan),
+        };
       nextDate = nextMonthly(nextDate, startDate);
     }
-    return { ...rule, nextDate };
+    return {
+      ...rule,
+      nextDate,
+      ...(plan
+        ? {
+            installments: plan,
+            active: rule.active && plan.paid < plan.count,
+            amount:
+              plan.paid < plan.count
+                ? nextInstallmentAmount(plan)
+                : rule.amount,
+          }
+        : {}),
+    };
   });
   return { ...s, recurring };
 }
@@ -419,4 +621,22 @@ export function expensesByAccountType(s: State, month: string) {
     totals[label] = (totals[label] ?? 0) + t.amount;
   }
   return Object.entries(totals).map(([name, total]) => ({ name, total }));
+}
+
+/** Pending installments only; does not alter actual spending or account balances. */
+export function installmentProjection(s: State, month: string) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error("Mes inválido");
+  let total = 0;
+  for (const r of s.recurring) {
+    if (!r.active || !r.installments) continue;
+    let p = { ...r.installments },
+      date = r.nextDate;
+    while (p.paid < p.count && date.slice(0, 7) <= month) {
+      const amount = nextInstallmentAmount(p);
+      if (date.startsWith(month)) total += amount;
+      p = { ...p, paid: p.paid + 1, paidAmount: p.paidAmount + amount };
+      date = nextMonthly(date, r.startDate);
+    }
+  }
+  return total;
 }

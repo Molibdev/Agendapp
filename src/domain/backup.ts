@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { State, stateSchema } from "./finance";
+import { State, stateSchema, nextMonthly } from "./finance";
 export const MAX_BACKUP_BYTES = 10 * 1024 * 1024;
 const envelope = z.object({
   format: z.literal("qgasto-backup"),
@@ -28,7 +28,10 @@ export function validateState(input: unknown): State {
   const category = (id: string, type: string) =>
     s.categories.some((c) => c.id === id && c.type === type);
   for (const t of [...s.transactions, ...s.recurring])
-    if (!account(t.accountId) || !category(t.categoryId, t.type))
+    if (
+      !account(t.accountId) ||
+      !category(t.categoryId, t.type === "installment" ? "expense" : t.type)
+    )
       throw new Error("Movimiento con referencias inválidas");
   for (const t of s.transfers)
     if (!account(t.fromId) || !account(t.toId))
@@ -48,6 +51,39 @@ export function validateState(input: unknown): State {
       throw new Error("Aporte sin meta");
   for (const r of s.recurring)
     if (r.nextDate < r.startDate) throw new Error("Fecha recurrente inválida");
+  for (const r of s.recurring) {
+    if (!r.installments) continue;
+    const payments = s.transactions.filter((t) =>
+      t.id.startsWith(`recurring:${r.id}:`),
+    );
+    const settlement = s.transactions.find(
+      (t) => t.id === `installment-settle:${r.id}`,
+    );
+    let next = r.startDate;
+    for (const payment of [...payments].sort((a, b) =>
+      a.date.localeCompare(b.date),
+    )) {
+      if (
+        payment.date !== next ||
+        payment.id !== `recurring:${r.id}:${next}` ||
+        payment.accountId !== r.accountId ||
+        payment.type !== "expense"
+      )
+        throw new Error("Calendario de cuotas incompatible con sus pagos");
+      next = nextMonthly(next, r.startDate);
+    }
+    if (next !== r.nextDate)
+      throw new Error("Fecha de próxima cuota incompatible");
+    const amount =
+      payments.reduce((n, t) => n + t.amount, 0) + (settlement?.amount ?? 0);
+    if (
+      amount !== r.installments.paidAmount ||
+      (!r.installments.settledAt && payments.length !== r.installments.paid) ||
+      !!settlement !== !!r.installments.settledAt ||
+      (settlement && settlement.date !== r.installments.settledAt)
+    )
+      throw new Error("El historial de cuotas no coincide con el plan");
+  }
   return s;
 }
 export function makeBackup(s: State): string {
