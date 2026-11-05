@@ -1745,8 +1745,11 @@ export default function Home() {
               <>
                 <DateField label="Hasta" value={to} onChange={setTo} />
                 <Text style={styles.muted}>
-                  Incluye movimientos del intervalo y saldos actuales de cuentas
-                  y metas. El archivo contiene datos financieros personales.
+                  Excel de una sola hoja con gráficos, resumen del intervalo y
+                  acumulados del mes y año hasta la fecha final elegida. Incluye
+                  cuentas, presupuestos, cuotas, metas y Agenda. Las
+                  proyecciones se muestran por separado. El archivo contiene
+                  datos financieros personales.
                 </Text>
               </>
             )}

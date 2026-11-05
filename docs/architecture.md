@@ -14,7 +14,7 @@ TanStack Query mantiene la vista de datos y AsyncStorage conserva la copia del d
 
 `src/domain/backup.ts` define el formato JSON `qgasto-backup`, versión 1, fecha UTC y estado financiero completo. Zod y las comprobaciones de referencias e IDs rechazan archivos incompatibles. No se incluyen sesiones ni contraseñas. Importar muestra un resumen y exige confirmación antes de reemplazar; no mezcla colecciones. Máximo 10 MB. El archivo externo permite recuperar datos cuando se pierde el almacenamiento local; no depende del caché de la app. No está cifrado: almacenarlo en un lugar privado.
 
-Excel es un informe separado, con nueve hojas (incluidos recurrentes e históricos). Los textos se exportan como celdas literales, sin convertir notas en fórmulas. No se usa XLSX como formato de restauración.
+Excel es un informe separado de una sola hoja, con indicadores, gráficos y tablas filtrables de finanzas, planes, cuentas y Agenda. Los textos se exportan como celdas literales, sin convertir notas en fórmulas. No se usa XLSX como formato de restauración.
 
 ## Recurrentes
 

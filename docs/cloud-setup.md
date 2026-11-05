@@ -113,7 +113,7 @@ Conectar Google inicia sesión con esa cuenta y puede cambiar el perfil de datos
 
 ## 6. Subir Excel directamente a Google Drive
 
-La opción está en **Actividad → Exportar Excel → Subir Excel a Drive**. Usa el mismo intervalo y las nueve hojas del informe descargable. No convierte el archivo a Google Sheets. El archivo se crea en el Drive de la cuenta autorizada; no se comparte públicamente ni se sobrescriben archivos anteriores. Los Excel no aparecen en Ver copias de Drive, reservado para JSON restaurables. La descarga/compartición habitual sigue disponible sin conectar Google.
+La opción está en **Actividad → Exportar Excel → Subir Excel a Drive**. Usa el mismo intervalo y el informe de una sola hoja que se puede descargar, con indicadores, tablas y gráficos. No convierte el archivo a Google Sheets. El archivo se crea en el Drive de la cuenta autorizada; no se comparte públicamente ni se sobrescriben archivos anteriores. Los Excel no aparecen en Ver copias de Drive, reservado para JSON restaurables. La descarga/compartición habitual sigue disponible sin conectar Google.
 
 Si el login Google ya funciona, reutilizar ese mismo proyecto y cliente OAuth:
 

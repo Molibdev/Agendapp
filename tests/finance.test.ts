@@ -12,6 +12,7 @@ import {
   Transaction,
 } from "../src/domain/finance";
 import { createWorkbook } from "../src/domain/workbook";
+import { writeReportWorkbook } from "../src/domain/reportXlsx";
 import * as XLSX from "xlsx";
 const fixture = (): State => ({
   ...initialState,
@@ -165,7 +166,7 @@ test("metas reservan fondos sin gastos y sin sobreasignar cuenta o meta", () => 
     }),
   );
 });
-test("XLSX conserva 9 hojas, importes numéricos, notas literales y filtra fechas", () => {
+test("XLSX concentra el informe en una hoja, conserva importes y filtra fechas", () => {
   let s = apply(fixture(), {
     kind: "transaction",
     value: { ...expense, note: '=HYPERLINK("https://example.com")' },
@@ -175,14 +176,18 @@ test("XLSX conserva 9 hojas, importes numéricos, notas literales y filtra fecha
     value: { ...expense, id: "other", date: "2026-11-01" },
   });
   const wb = createWorkbook(s, "2026-10-01", "2026-10-31");
-  assert.equal(wb.SheetNames.length, 9);
-  assert.equal(wb.Sheets.Movimientos.G2.t, "s");
-  assert.equal(wb.Sheets.Movimientos.G2.f, undefined);
-  const bytes = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-  const restored = XLSX.read(bytes, { type: "buffer" });
-  const rows = XLSX.utils.sheet_to_json(restored.Sheets.Movimientos);
-  assert.equal(rows.length, 1);
-  assert.equal(restored.Sheets.Resumen.E2.v, 100000);
+  assert.deepEqual(wb.SheetNames, ["Agendapp"]);
+  assert.equal(wb.report.sections.movements.count, 1);
+  const note = wb.Sheets.Agendapp[`L${wb.report.sections.movements.firstRow}`];
+  assert.equal(note.t, "s");
+  assert.equal(note.f, undefined);
+  const restored = XLSX.read(writeReportWorkbook(wb), { type: "array" });
+  assert.deepEqual(restored.SheetNames, ["Agendapp"]);
+  assert.equal(restored.Sheets.Agendapp.D7.v, 100000);
+  assert.equal(
+    restored.Sheets.Agendapp[`L${wb.report.sections.movements.firstRow}`].v,
+    '=HYPERLINK("https://example.com")',
+  );
   assert.throws(() => createWorkbook(s, "2026-11-01", "2026-10-01"));
 });
 

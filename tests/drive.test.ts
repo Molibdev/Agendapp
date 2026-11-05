@@ -38,13 +38,17 @@ state = apply(state, {
     note: "Mes anterior",
   },
 });
-test("Excel compartido conserva las nueve hojas y filtra los movimientos por fecha", () => {
+test("Excel compartido conserva el informe de una hoja y filtra movimientos", () => {
   const file = createExcelFile(state, "2026-11-01", "2026-11-30");
   assert.equal(file.name, "Agendapp_2026-11-01_2026-11-30.xlsx");
   const workbook = XLSX.read(file.bytes, { type: "array" });
-  assert.equal(workbook.SheetNames.length, 9);
-  assert.equal(workbook.Sheets.Resumen.E2.v, 5000);
-  assert.equal(XLSX.utils.sheet_to_json(workbook.Sheets.Movimientos).length, 1);
+  assert.deepEqual(workbook.SheetNames, ["Agendapp"]);
+  assert.equal(workbook.Sheets.Agendapp.D7.v, 5000);
+  const values = Object.values(workbook.Sheets.Agendapp).map((cell) =>
+    typeof cell === "object" && "v" in cell ? cell.v : undefined,
+  );
+  assert.ok(values.includes("Almuerzo"));
+  assert.equal(values.includes("Mes anterior"), false);
 });
 test("Drive recibe un XLSX binario íntegro con metadatos y responde con confirmación", async () => {
   const file = createExcelFile(state, "2026-11-01", "2026-11-30");
@@ -77,7 +81,7 @@ test("Drive recibe un XLSX binario íntegro con metadatos y responde con confirm
     const end = bytes.lastIndexOf(Buffer.from(`\r\n--${boundary}--`));
     const uploaded = bytes.subarray(start, end);
     assert.equal(
-      XLSX.read(uploaded, { type: "buffer" }).Sheets.Resumen.E2.v,
+      XLSX.read(uploaded, { type: "buffer" }).Sheets.Agendapp.D7.v,
       5000,
     );
     assert.deepEqual(uploaded.subarray(0, 2), Buffer.from("PK"));

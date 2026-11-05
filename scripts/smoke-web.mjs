@@ -110,9 +110,19 @@ try {
   const download = await downloadPromise;
   await button("Cancelar").waitFor({ state: "hidden" });
   const wb = XLSX.read(readFileSync(await download.path()), { type: "buffer" });
-  assert.equal(wb.SheetNames.length, 9);
-  assert.equal(wb.Sheets.Resumen.E2.v, 100000);
-  assert.equal(XLSX.utils.sheet_to_json(wb.Sheets.Transferencias).length, 0);
+  assert.deepEqual(wb.SheetNames, ["Agendapp"]);
+  assert.equal(wb.Sheets.Agendapp.D7.v, 100000);
+  const reportValues = Object.values(wb.Sheets.Agendapp).map((cell) =>
+    typeof cell === "object" && "v" in cell ? cell.v : undefined,
+  );
+  assert.ok(
+    reportValues.includes("MOVIMIENTOS DEL INTERVALO · datos registrados"),
+  );
+  assert.ok(
+    reportValues.includes(
+      "TRANSFERENCIAS HISTÓRICAS DEL INTERVALO · no son gastos",
+    ),
+  );
   await openSettings();
   const jsonDownload = page.waitForEvent("download");
   await settingsSection(page, "Copias de seguridad");

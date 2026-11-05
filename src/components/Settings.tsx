@@ -191,11 +191,18 @@ export function Settings({
     <View style={{ gap: 12 }}>
       <Text style={styles.body}>
         Esta copia contiene {pending.accounts.length} cuentas,{" "}
-        {pending.transactions.length} movimientos y {pending.recurring.length}{" "}
-        recurrentes y {pending.events.length} eventos de agenda. Restaurarla
-        reemplazará los datos de este perfil en el dispositivo y se sincronizará
-        si has iniciado sesión. Descarga antes una copia de los datos actuales
-        si deseas conservarlos.
+        {pending.transactions.length} movimientos, {pending.categories.length}{" "}
+        categorías, {pending.budgets.length} presupuestos,{" "}
+        {pending.goals.length} metas, {pending.contributions.length} aportes,{" "}
+        {pending.recurring.length} pagos recurrentes o planes en cuotas,{" "}
+        {pending.transfers.length} transferencias históricas y{" "}
+        {pending.events.length} eventos de agenda. Incluye{" "}
+        {pending.recurring.filter((r) => r.installments).length} compras en
+        cuotas y {pending.recurring.filter((r) => r.archived).length} pagos
+        retirados. Restaurarla reemplazará los datos de este perfil en el
+        dispositivo y se sincronizará si has iniciado sesión. Descarga antes una
+        copia de los datos actuales si deseas conservarlos. No activa el bloqueo
+        por huella ni cambia tu sesión o los permisos de Google.
       </Text>
       {button("Confirmar restauración", () => {
         void run(
