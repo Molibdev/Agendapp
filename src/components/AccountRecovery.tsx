@@ -1,8 +1,9 @@
+import { SheetModal } from "./SheetModal";
 import { Sheet } from "./Sheet";
 import { Pressable } from "./Pressable";
 import { FloatingFeedback } from "./FloatingFeedback";
 import React, { useEffect, useState } from "react";
-import { Modal, Text, TextInput, View } from "react-native";
+import { Text, TextInput, View } from "react-native";
 import { supabase, useAuth } from "../data/auth";
 import { updateRecoveredPassword } from "../data/accountActions";
 import { useTheme } from "./theme";
@@ -51,10 +52,8 @@ export function AccountRecovery() {
     </Pressable>
   );
   return (
-    <Modal
+    <SheetModal
       visible={recovering || !!accountNotice}
-      transparent
-      animationType="fade"
       onRequestClose={() => {
         if (recovering) {
           void cancel();
@@ -151,6 +150,6 @@ export function AccountRecovery() {
         )}
       </Sheet>
       <FloatingFeedback modal active={recovering || !!accountNotice} />
-    </Modal>
+    </SheetModal>
   );
 }

@@ -1,3 +1,4 @@
+import { settingsSection } from "./settings-navigation.mjs";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -114,6 +115,7 @@ try {
   assert.equal(XLSX.utils.sheet_to_json(wb.Sheets.Transferencias).length, 0);
   await openSettings();
   const jsonDownload = page.waitForEvent("download");
+  await settingsSection(page, "Copias de seguridad");
   await button("Descargar copia JSON").click();
   const backup = await jsonDownload;
   const backupPath = await backup.path();
@@ -124,9 +126,11 @@ try {
   assert.equal(contents.data.accounts[0].bankType, "sight");
   assert.equal(contents.data.accounts[1].creditLimit, 300000);
   assert.equal(contents.data.accounts[1].billingDay, 20);
+  await settingsSection(page, "Apariencia");
   await button("Cambiar a modo nocturno").click();
   await page.reload();
   await openSettings();
+  await settingsSection(page, "Apariencia");
   await button("Cambiar a modo claro").waitFor();
   await page.getByRole("tab", { name: "Actividad" }).click();
   await button("− Gasto").click();
@@ -167,11 +171,13 @@ try {
   await button("Crear mi primera cuenta").waitFor();
   await openSettings();
   const canceledChooser = page.waitForEvent("filechooser");
+  await settingsSection(page, "Copias de seguridad");
   await button("Cargar copia de seguridad").click();
   await canceledChooser;
   await page.locator('input[type="file"]').dispatchEvent("cancel");
   assert.equal(await button("Cargar copia de seguridad").isEnabled(), true);
   const invalidChooser = page.waitForEvent("filechooser");
+  await settingsSection(page, "Copias de seguridad");
   await button("Cargar copia de seguridad").click();
   await (
     await invalidChooser
@@ -187,6 +193,7 @@ try {
     .waitFor();
   assert.equal(await button("Confirmar restauración").count(), 0);
   const chooser = page.waitForEvent("filechooser");
+  await settingsSection(page, "Copias de seguridad");
   await button("Cargar copia de seguridad").click();
   await (
     await chooser
@@ -230,10 +237,12 @@ try {
   await button("Hoy").click();
   // Category settings and editing both kinds of transactions.
   await openSettings();
+  await settingsSection(page, "Categorías de gasto");
   await field("Nombre de categoría").fill("Educación");
   await button("Agregar categoría").click();
   await page.getByText("Categoría guardada", { exact: true }).waitFor();
   await button("Renombrar categoría Educación").click();
+  await settingsSection(page, "Categorías de gasto");
   await field("Nombre de categoría").fill("Estudios");
   await button("Guardar categoría").click();
   await button("Renombrar categoría Estudios").waitFor();
@@ -305,6 +314,7 @@ try {
   // Readable button foreground/background in both themes (WCAG normal text).
   for (const dark of [true, false]) {
     await openSettings();
+    await settingsSection(page, "Apariencia");
     const switchLabel = dark
       ? "Cambiar a modo claro"
       : "Cambiar a modo nocturno";

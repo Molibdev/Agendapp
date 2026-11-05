@@ -287,7 +287,7 @@ function build(dark: boolean, fonts: boolean) {
     overlay: {
       flex: 1,
       justifyContent: "flex-end",
-      backgroundColor: "rgba(5,3,12,0.72)",
+      backgroundColor: "transparent",
     },
     sheet: {
       width: "100%",

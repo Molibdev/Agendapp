@@ -1,3 +1,4 @@
+import { SheetModal } from "../src/components/SheetModal";
 import {
   installmentRemaining,
   installmentProjection,
@@ -10,7 +11,6 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   Animated,
-  Modal,
   Platform,
   ScrollView,
   Text,
@@ -72,6 +72,7 @@ type Form =
   | "income"
   | "expense"
   | "recurring"
+  | "delete-recurring"
   | "installment-edit"
   | "installment-settle"
   | "account"
@@ -83,6 +84,7 @@ const titles: Record<Form, string> = {
   income: "Nuevo ingreso",
   expense: "Nuevo gasto",
   recurring: "Nuevo pago mensual",
+  "delete-recurring": "Quitar de pagos recurrentes",
   "installment-edit": "Editar cuotas",
   "installment-settle": "Pagado con anterioridad",
   account: "Nueva cuenta",
@@ -400,6 +402,10 @@ export default function Home() {
         await exportExcel(s, date, to);
         notify("Excel generado");
         setForm(null);
+        return;
+      }
+      if (form === "delete-recurring") {
+        await commit({ kind: "delete-recurring", id: planId });
         return;
       }
       if (form === "installment-edit") {
@@ -1065,145 +1071,167 @@ export default function Home() {
                 <View
                   style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}
                 >
-                  {s.recurring.map((r) => (
-                    <View
-                      key={r.id}
-                      style={[
-                        styles.card,
-                        {
-                          width:
-                            width >= 850
-                              ? "31.8%"
-                              : width >= 360
-                                ? "48%"
-                                : "100%",
-                          padding: 16,
-                          gap: 10,
-                        },
-                      ]}
-                    >
-                      <View style={[styles.row, { alignItems: "center" }]}>
-                        <View
-                          style={[
-                            styles.icon,
-                            {
-                              backgroundColor: colors.soft,
-                              width: 36,
-                              height: 36,
-                              borderRadius: 12,
-                            },
-                          ]}
-                        >
-                          <AppIcon
-                            name="calendar"
-                            color={colors.accent}
-                            size={18}
-                          />
-                        </View>
-                        <View
-                          style={[
-                            styles.badge,
-                            {
-                              backgroundColor: r.active
-                                ? colors.soft
-                                : colors.border + "44",
-                              paddingHorizontal: 7,
-                              paddingVertical: 3,
-                            },
-                          ]}
-                        >
-                          <Text
+                  {s.recurring
+                    .filter((r) => !r.archived)
+                    .map((r) => (
+                      <View
+                        key={r.id}
+                        style={[
+                          styles.card,
+                          {
+                            width:
+                              width >= 850
+                                ? "31.8%"
+                                : width >= 360
+                                  ? "48%"
+                                  : "100%",
+                            padding: 16,
+                            gap: 10,
+                          },
+                        ]}
+                      >
+                        <View style={[styles.row, { alignItems: "center" }]}>
+                          <View
                             style={[
-                              styles.label,
+                              styles.icon,
                               {
-                                fontSize: 9,
-                                color: r.active ? colors.accent : colors.muted,
+                                backgroundColor: colors.soft,
+                                width: 36,
+                                height: 36,
+                                borderRadius: 12,
                               },
                             ]}
                           >
-                            {r.installments?.paid === r.installments?.count &&
-                            r.installments
-                              ? "PAGADO"
-                              : r.active
-                                ? "ACTIVO"
-                                : "EN PAUSA"}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={styles.cardTitle}>
-                        {r.note ||
-                          s.categories.find((c) => c.id === r.categoryId)?.name}
-                      </Text>
-                      <Text style={[styles.accountAmount, { fontSize: 21 }]}>
-                        {clp(r.amount)}
-                      </Text>
-                      {r.installments ? (
-                        <>
-                          <Text style={styles.muted}>
-                            {r.installments.paid} de {r.installments.count}{" "}
-                            cuotas cubiertas
-                          </Text>
-                          <Text style={styles.body}>
-                            Pendiente:{" "}
-                            {clp(installmentRemaining(r.installments))}
-                          </Text>
-                          <Text style={styles.muted}>
-                            Interés total: {clp(r.installments.interest)}
-                          </Text>
-                        </>
-                      ) : null}
-                      {(!r.installments ||
-                        r.installments.paid < r.installments.count) && (
-                        <Text style={styles.muted}>Próximo: {r.nextDate}</Text>
-                      )}
-                      {r.installments &&
-                        r.installments.paid < r.installments.count && (
-                          <>
-                            <Button
-                              label="Editar cuotas"
-                              secondary
-                              onPress={() => {
-                                open("installment-edit");
-                                setPlanId(r.id);
-                                setInstallmentCount(
-                                  String(r.installments!.count),
-                                );
-                              }}
+                            <AppIcon
+                              name="calendar"
+                              color={colors.accent}
+                              size={18}
                             />
-                            <Button
-                              label="Pagado con anterioridad"
-                              secondary
-                              onPress={() => {
-                                open("installment-settle");
-                                setPlanId(r.id);
-                              }}
-                            />
-                          </>
-                        )}
-                      {(!r.installments ||
-                        r.installments.paid < r.installments.count) && (
-                        <Pressable
-                          accessibilityRole="button"
-                          onPress={() => {
-                            void save({
-                              kind: "toggle-recurring",
-                              id: r.id,
-                            }).catch((e) => notify(e.message, "error"));
-                          }}
-                          style={[styles.button, styles.secondary]}
-                        >
-                          <Text
+                          </View>
+                          <View
                             style={[
-                              styles.buttonText,
-                              { color: colors.accent },
+                              styles.badge,
+                              {
+                                backgroundColor: r.active
+                                  ? colors.soft
+                                  : colors.border + "44",
+                                paddingHorizontal: 7,
+                                paddingVertical: 3,
+                              },
                             ]}
                           >
-                            {r.active ? "Pausar" : "Reanudar"}
+                            <Text
+                              style={[
+                                styles.label,
+                                {
+                                  fontSize: 9,
+                                  color: r.active
+                                    ? colors.accent
+                                    : colors.muted,
+                                },
+                              ]}
+                            >
+                              {r.installments?.paid === r.installments?.count &&
+                              r.installments
+                                ? "PAGADO"
+                                : r.active
+                                  ? "ACTIVO"
+                                  : "EN PAUSA"}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={styles.cardTitle}>
+                          {r.note ||
+                            s.categories.find((c) => c.id === r.categoryId)
+                              ?.name}
+                        </Text>
+                        <Text style={[styles.accountAmount, { fontSize: 21 }]}>
+                          {clp(r.amount)}
+                        </Text>
+                        {r.installments ? (
+                          <>
+                            <Text style={styles.muted}>
+                              {r.installments.paid} de {r.installments.count}{" "}
+                              cuotas cubiertas
+                            </Text>
+                            <Text style={styles.body}>
+                              Pendiente:{" "}
+                              {clp(installmentRemaining(r.installments))}
+                            </Text>
+                            <Text style={styles.muted}>
+                              Interés total: {clp(r.installments.interest)}
+                            </Text>
+                          </>
+                        ) : null}
+                        {(!r.installments ||
+                          r.installments.paid < r.installments.count) && (
+                          <Text style={styles.muted}>
+                            Próximo: {r.nextDate}
                           </Text>
-                        </Pressable>
-                      )}
-                    </View>
-                  ))}
+                        )}
+                        {r.installments &&
+                          r.installments.paid < r.installments.count && (
+                            <>
+                              <Button
+                                label="Editar cuotas"
+                                secondary
+                                onPress={() => {
+                                  open("installment-edit");
+                                  setPlanId(r.id);
+                                  setInstallmentCount(
+                                    String(r.installments!.count),
+                                  );
+                                }}
+                              />
+                              <Button
+                                label="Pagado con anterioridad"
+                                secondary
+                                onPress={() => {
+                                  open("installment-settle");
+                                  setPlanId(r.id);
+                                }}
+                              />
+                            </>
+                          )}
+                        {(!r.installments ||
+                          r.installments.paid < r.installments.count) && (
+                          <Pressable
+                            accessibilityRole="button"
+                            onPress={() => {
+                              void save({
+                                kind: "toggle-recurring",
+                                id: r.id,
+                              }).catch((e) => notify(e.message, "error"));
+                            }}
+                            style={[styles.button, styles.secondary]}
+                          >
+                            <Text
+                              style={[
+                                styles.buttonText,
+                                { color: colors.accent },
+                              ]}
+                            >
+                              {r.active ? "Pausar" : "Reanudar"}
+                            </Text>
+                          </Pressable>
+                        )}
+                        {(!r.installments ||
+                          r.installments.paid === r.installments.count) && (
+                          <Button
+                            secondary
+                            label={
+                              r.installments
+                                ? "Quitar compra pagada"
+                                : "Eliminar recurrente"
+                            }
+                            onPress={() => {
+                              open("delete-recurring");
+                              setPlanId(r.id);
+                            }}
+                          />
+                        )}
+                      </View>
+                    ))}
                 </View>
                 <View style={styles.card}>
                   <Text style={styles.cardTitle}>Proyección de cuotas</Text>
@@ -1224,7 +1252,7 @@ export default function Home() {
                     );
                   })}
                 </View>
-                {!s.recurring.length && (
+                {!s.recurring.some((r) => !r.archived) && (
                   <View style={[styles.card, { alignItems: "flex-start" }]}>
                     <AppIcon name="calendar" size={25} color={colors.accent} />
                     <Text style={styles.cardTitle}>
@@ -1317,6 +1345,9 @@ export default function Home() {
             )}
             {(tab === "Ajustes" || tab === "Perfil") && (
               <Settings
+                onNavigate={() =>
+                  contentScroll.current?.scrollTo({ y: 0, animated: false })
+                }
                 section={tab === "Perfil" ? "profile" : "preferences"}
                 key={`${session?.user.id ?? "guest"}:${tab}`}
                 state={s}
@@ -1420,12 +1451,10 @@ export default function Home() {
           </Pressable>
         )}
       </View>
-      <Modal
+      <SheetModal
         visible={
           form !== null || (calendar.request !== null && tab !== "Agenda")
         }
-        transparent
-        animationType="slide"
         onRequestClose={() => {
           if (calendar.request) {
             calendar.close();
@@ -1460,6 +1489,19 @@ export default function Home() {
                 <AppIcon name="close" />
               </Pressable>
             </View>
+            {form === "delete-recurring" && (
+              <>
+                <Text style={styles.body}>
+                  Se quitará este registro de la lista y se detendrán sus
+                  próximos cargos. Los gastos ya registrados y el historial se
+                  conservan.
+                </Text>
+                <Text style={styles.cardTitle}>
+                  {s.recurring.find((r) => r.id === planId)?.note ||
+                    "Pago mensual"}
+                </Text>
+              </>
+            )}
             {form === "recurring" && (
               <>
                 <Choices
@@ -1660,6 +1702,7 @@ export default function Home() {
               />
             )}
             {form !== "export" &&
+              form !== "delete-recurring" &&
               form !== "installment-edit" &&
               form !== "installment-settle" &&
               !(form === "account" && editing) && (
@@ -1749,11 +1792,13 @@ export default function Home() {
                 label={
                   busy || saving
                     ? "Guardando…"
-                    : form === "installment-settle"
-                      ? "Confirmar pago anticipado"
-                      : form === "export"
-                        ? "Generar y compartir XLSX"
-                        : "Guardar"
+                    : form === "delete-recurring"
+                      ? "Confirmar eliminación"
+                      : form === "installment-settle"
+                        ? "Confirmar pago anticipado"
+                        : form === "export"
+                          ? "Generar y compartir XLSX"
+                          : "Guardar"
                 }
                 disabled={busy || saving}
                 onPress={() => {
@@ -1818,7 +1863,7 @@ export default function Home() {
             form !== null || (calendar.request !== null && tab !== "Agenda")
           }
         />
-      </Modal>
+      </SheetModal>
     </SafeAreaView>
   );
 }

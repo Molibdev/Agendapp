@@ -1,3 +1,4 @@
+import { AppLockProvider, AppLockGate } from "../src/components/AppLock";
 import { AccountRecovery } from "../src/components/AccountRecovery";
 import { FloatingFeedback } from "../src/components/FloatingFeedback";
 import { LaunchScreen } from "../src/components/LaunchScreen";
@@ -14,13 +15,17 @@ export default function Layout() {
       <QueryClientProvider client={client}>
         <AuthProvider>
           <ThemeProvider>
-            <CalendarProvider>
-              <LaunchScreen>
-                <Stack screenOptions={{ headerShown: false }} />
-                <AccountRecovery />
-                <FloatingFeedback />
-              </LaunchScreen>
-            </CalendarProvider>
+            <AppLockProvider>
+              <CalendarProvider>
+                <LaunchScreen>
+                  <AppLockGate>
+                    <Stack screenOptions={{ headerShown: false }} />
+                    <AccountRecovery />
+                    <FloatingFeedback />
+                  </AppLockGate>
+                </LaunchScreen>
+              </CalendarProvider>
+            </AppLockProvider>
           </ThemeProvider>
         </AuthProvider>
       </QueryClientProvider>

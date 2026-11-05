@@ -160,6 +160,7 @@ export function useFinance() {
           recurring: "Pago mensual guardado",
           "resize-installments": "Cuotas actualizadas",
           "settle-installments": "Pago anticipado registrado",
+          "delete-recurring": "Registro retirado de pagos recurrentes",
           "toggle-recurring": "Recurrente actualizado",
           "process-recurring": "Movimientos recurrentes registrados",
         };

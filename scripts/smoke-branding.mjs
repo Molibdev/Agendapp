@@ -1,3 +1,4 @@
+import { settingsSection } from "./settings-navigation.mjs";
 // Local UI checks only: normal/reduced launch, bottom dock, gestures and transitions.
 import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
@@ -96,6 +97,7 @@ try {
   await button("Cerrar ajustes").click();
   await expect(page.getByTestId("section-content")).toHaveCSS("opacity", "1");
   await button("Abrir ajustes").click();
+  await settingsSection(page, "Apariencia");
   await button("Cambiar a modo claro").click();
   await expect(notice()).toContainText("Modo claro activado ✓");
   await expect(notice()).toHaveCSS("opacity", "1");
@@ -115,6 +117,7 @@ try {
   await page.screenshot({ path: "/tmp/agendapp-compact-error.png" });
   await button("Cerrar notificación").click();
   await button("Cancelar").click();
+  await expect(page.getByTestId("sheet-panel")).toHaveCount(0);
   await page.screenshot({ path: "/tmp/agendapp-branding-home-light.png" });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.reload({ waitUntil: "domcontentloaded" });

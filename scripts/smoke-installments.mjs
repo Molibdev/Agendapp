@@ -1,3 +1,4 @@
+import { settingsSection } from "./settings-navigation.mjs";
 import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -128,10 +129,11 @@ try {
   await page.screenshot({ path: "/tmp/agendapp-010-agenda-dark.png" });
   await button("Información de Agendapp").dblclick({ delay: 70 });
   await expect(page.getByTestId("floating-feedback")).toContainText(
-    "Versión: 0.10.0",
+    `Versión: ${JSON.parse(readFileSync("app.json")).expo.version}`,
   );
   await clearNotices();
   await button("Abrir ajustes").click();
+  await settingsSection(page, "Apariencia");
   await button("Cambiar a modo claro").click();
   await clearNotices();
   await button("Cerrar ajustes").click();
@@ -139,7 +141,7 @@ try {
   await page.screenshot({ path: "/tmp/agendapp-010-agenda-light.png" });
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: numeric-only edits, future purchase with interest, monthly posting, resize, early payoff, persisted totals, version 0.10.0 and floating calendar action in both themes.",
+    "PASS: numeric-only edits, future purchase with interest, monthly posting, resize, early payoff, persisted totals, current version and floating calendar action in both themes.",
   );
 } catch (e) {
   await page.screenshot({ path: "/tmp/agendapp-010-installments-error.png" });

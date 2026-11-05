@@ -1,6 +1,6 @@
 import { Sheet } from "./Sheet";
 import { Pressable } from "./Pressable";
-import React, { useState, createContext, useContext } from "react";
+import React, { useState, createContext, useContext, useRef } from "react";
 import { Text, TextInput, View, Keyboard } from "react-native";
 import { AppIcon } from "./AppIcon";
 import { useTheme } from "./theme";
@@ -102,7 +102,10 @@ export function DateField(props: Request) {
 }
 export function CalendarContent() {
   const { styles } = useTheme();
-  const { request, close } = useCalendar();
+  const { request: latestRequest, close } = useCalendar();
+  const retained = useRef(latestRequest);
+  if (latestRequest) retained.current = latestRequest;
+  const request = latestRequest ?? retained.current;
   const {
     label,
     value,

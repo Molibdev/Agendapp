@@ -1,3 +1,4 @@
+import { settingsSection } from "./settings-navigation.mjs";
 // Full browser flow against a local build and mocked Supabase endpoints.
 // Does not send email, authenticate real accounts or touch a remote database.
 import { execFileSync } from "node:child_process";
@@ -315,6 +316,7 @@ try {
     page.getByText("Cuenta y sincronización", { exact: true }),
   ).toHaveCount(0);
   await expect(page.getByText("Google Drive", { exact: true })).toHaveCount(0);
+  await settingsSection(page, "Categorías de gasto");
   await field("Nombre de categoría").fill("Cuenta de prueba");
   await button("Agregar categoría").click();
   await expect(
@@ -340,6 +342,7 @@ try {
   await expect(button("Cerrar sesión")).toBeVisible();
   blockSync = true;
   await settings();
+  await settingsSection(page, "Categorías de gasto");
   await field("Nombre de categoría").fill("Pendiente");
   await button("Agregar categoría").click();
   await expect(

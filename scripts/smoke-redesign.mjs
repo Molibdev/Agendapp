@@ -1,3 +1,4 @@
+import { settingsSection } from "./settings-navigation.mjs";
 // Visual and behavioral checks against the local export; no remote services.
 import { chromium, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
@@ -100,6 +101,7 @@ try {
   await expect(
     page.getByText("Cuenta y sincronización", { exact: true }),
   ).toHaveCount(0);
+  await settingsSection(page, "Copias de seguridad");
   const normalPadding = await page
     .getByText("Copias de seguridad", { exact: true })
     .evaluate((el) =>
@@ -130,6 +132,7 @@ try {
   await button("Cerrar perfil").click();
   await expect(tab("Inicio")).toHaveAttribute("aria-selected", "true");
   await button("Abrir ajustes").click();
+  await settingsSection(page, "Apariencia");
   await button("Cambiar a modo claro").click();
   await tab("Inicio").click();
   await page.screenshot({ path: "/tmp/agendapp-redesign-home-light.png" });

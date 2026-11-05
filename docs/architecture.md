@@ -81,3 +81,7 @@ Los avisos usan texto de 13 px, ancho máximo de 360 px y el indicador de estado
 ## Compras en cuotas (0.10.0)
 
 Los planes se guardan en `recurring` con discriminador `type: installment` y metadatos de precio, interés total, cantidad de cuotas, avance, importe cubierto y fecha de prepago. Los movimientos generados conservan `type: expense`. El discriminador impide que lectores anteriores ignoren los metadatos financieros. Se conserva el envelope versión 1 de Supabase y JSON; no cambia el servicio Drive. Ver [semántica de cuotas](installments-and-agenda.md).
+
+## Seguridad local y preferencias (0.11.0)
+
+`AppLockController` gestiona el opt-in, la persistencia local y la autenticación de inicio/retorno, con `expo-local-authentication` y SecureStore en Android. `AppLockGate` conserva el árbol pero oculta el contenido y `SheetModal` suprime los menús mientras esté bloqueada. Las preferencias no forman parte de los snapshots. Los pagos retirados conservan su regla e historial con `archived: true` e inactividad; los planes pendientes no se pueden retirar. Ver [detalles, límites y prueba Android](preferences-and-lock.md).

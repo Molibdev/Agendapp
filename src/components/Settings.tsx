@@ -1,6 +1,15 @@
+import { SecuritySettings } from "./AppLock";
+import { useSectionTransition } from "./motion";
 import { Pressable } from "./Pressable";
-import React, { useState, useEffect } from "react";
-import { Text, TextInput, View, Switch } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Animated,
+  BackHandler,
+  Text,
+  TextInput,
+  View,
+  Switch,
+} from "react-native";
 import { useTheme } from "./theme";
 import { Licenses } from "./Licenses";
 import { CategoryTag } from "./CategoryTag";
@@ -26,6 +35,7 @@ import { accountEmail, requestAccountEmail } from "../data/accountActions";
 import { listDrive, restoreDrive, uploadDrive } from "../data/cloud";
 type Props = {
   section?: "preferences" | "profile";
+  onNavigate?: () => void;
   state: State;
   save: (command: Command) => Promise<unknown>;
   restore: (s: State) => Promise<void>;
@@ -36,6 +46,7 @@ type Props = {
 };
 export function Settings({
   section = "preferences",
+  onNavigate,
   state,
   save,
   restore,
@@ -47,6 +58,35 @@ export function Settings({
   const { styles: themeStyles, colors, dark, toggle } = useTheme(),
     { session } = useAuth();
   const profile = section === "profile";
+  type Page =
+    | "menu"
+    | "appearance"
+    | "security"
+    | "categories"
+    | "backup"
+    | "licenses";
+  const {
+    current: page,
+    navigate,
+    style: pageStyle,
+  } = useSectionTransition<Page>("menu");
+  const onNavigateRef = useRef(onNavigate);
+  onNavigateRef.current = onNavigate;
+  useEffect(() => {
+    onNavigateRef.current?.();
+  }, [page]);
+  useEffect(() => {
+    if (profile || page === "menu") return;
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        navigate("menu");
+        return true;
+      },
+    );
+    return () => subscription.remove();
+  }, [page, profile, navigate]);
+
   const styles = {
     ...themeStyles,
     card: [themeStyles.card, profile && themeStyles.profileCard],
@@ -177,159 +217,304 @@ export function Settings({
     <View style={{ gap: profile ? 16 : 22 }}>
       {!profile && (
         <>
-          <View style={styles.card}>
-            <Text style={styles.section}>Apariencia</Text>
-            <Text style={styles.body}>
-              Un espacio a tu medida, para tus días y tus cuentas.
-            </Text>
-            {button(
-              dark ? "Cambiar a modo claro" : "Cambiar a modo nocturno",
-              () => {
-                toggle();
-                notify(dark ? "Modo claro activado" : "Modo nocturno activado");
-              },
-            )}
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.section}>Categorías de gasto</Text>
-            <Text style={styles.body}>
-              Agrega o renombra categorías. Los movimientos y presupuestos
-              conservan su historial.
-            </Text>
-            {state.categories
-              .filter((c) => c.type === "expense")
-              .map((c) => (
-                <View
-                  key={c.id}
-                  style={[
-                    styles.row,
-                    { alignItems: "center", flexWrap: "wrap" },
-                  ]}
-                >
-                  <CategoryTag id={c.id} name={c.name} />
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Renombrar categoría ${c.name}`}
-                    style={styles.chip}
-                    disabled={busy}
-                    onPress={() => {
-                      setCategoryId(c.id);
-                      setCategoryName(c.name);
-                      setCategoryMessage("");
-                    }}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <AppIcon name="edit" size={14} color={colors.accent} />
-                      <Text style={styles.link}>Editar</Text>
-                    </View>
-                  </Pressable>
-                </View>
-              ))}
-            <Text style={styles.label}>
-              {categoryId ? "Renombrar categoría" : "Nueva categoría de gasto"}
-            </Text>
-            <TextInput
-              accessibilityLabel="Nombre de categoría"
-              value={categoryName}
-              maxLength={80}
-              onChangeText={setCategoryName}
-              style={styles.input}
-              placeholder="Por ejemplo: Educación"
-              placeholderTextColor={styles.muted.color}
-            />
-            {button(
-              categoryId ? "Guardar categoría" : "Agregar categoría",
-              () => {
-                setCategoryMessage("");
-                void run(async () => {
-                  try {
-                    await save({
-                      kind: "category",
-                      value: {
-                        id: categoryId ?? randomUUID(),
-                        name: categoryName,
-                        type: "expense",
+          <Animated.View
+            testID="settings-page"
+            style={[{ gap: 18 }, pageStyle]}
+          >
+            {page === "menu" && (
+              <>
+                <Text style={styles.body}>
+                  Elige qué quieres ajustar en Agendapp.
+                </Text>
+                {[
+                  {
+                    title: "PERSONALIZA TU ESPACIO",
+                    items: [
+                      {
+                        id: "appearance",
+                        title: "Apariencia",
+                        detail: "Tema claro y nocturno",
+                        icon: "palette",
                       },
-                    });
+                      {
+                        id: "security",
+                        title: "Seguridad",
+                        detail: "Bloqueo por huella en este teléfono",
+                        icon: "fingerprint",
+                      },
+                    ],
+                  },
+                  {
+                    title: "TUS DATOS",
+                    items: [
+                      {
+                        id: "categories",
+                        title: "Categorías de gasto",
+                        detail: "Agrega y organiza tus categorías",
+                        icon: "tag",
+                      },
+                      {
+                        id: "backup",
+                        title: "Copias de seguridad",
+                        detail: "Exporta o restaura tus datos locales",
+                        icon: "download",
+                      },
+                    ],
+                  },
+                  {
+                    title: "ACERCA DE AGENDAPP",
+                    items: [
+                      {
+                        id: "licenses",
+                        title: "Créditos y licencias",
+                        detail: "Tecnologías y licencias de la aplicación",
+                        icon: "shield",
+                      },
+                    ],
+                  },
+                ].map((group) => (
+                  <View key={group.title} style={{ gap: 9 }}>
+                    <Text style={styles.eyebrow}>{group.title}</Text>
+                    <View
+                      style={[
+                        styles.card,
+                        { padding: 0, gap: 0, overflow: "hidden" },
+                      ]}
+                    >
+                      {group.items.map((item, index) => (
+                        <Pressable
+                          key={item.id}
+                          accessibilityRole="button"
+                          accessibilityLabel={item.title}
+                          onPress={() => navigate(item.id as Page)}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 13,
+                            padding: 16,
+                            minHeight: 76,
+                            borderBottomWidth:
+                              index < group.items.length - 1 ? 1 : 0,
+                            borderBottomColor: colors.border,
+                          }}
+                        >
+                          <View
+                            style={{
+                              width: 38,
+                              height: 38,
+                              borderRadius: 12,
+                              backgroundColor: colors.soft,
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <AppIcon
+                              name={item.icon as import("./AppIcon").IconName}
+                              size={21}
+                              color={colors.accent}
+                            />
+                          </View>
+                          <View style={{ flex: 1, gap: 4 }}>
+                            <Text style={styles.cardTitle}>{item.title}</Text>
+                            <Text style={[styles.muted, { fontSize: 12 }]}>
+                              {item.detail}
+                            </Text>
+                          </View>
+                          <AppIcon
+                            name="right"
+                            size={18}
+                            color={colors.muted}
+                          />
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </>
+            )}
+            {page !== "menu" && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Volver a Ajustes"
+                onPress={() => navigate("menu")}
+                style={[
+                  styles.row,
+                  { justifyContent: "flex-start", minHeight: 44, gap: 6 },
+                ]}
+              >
+                <AppIcon name="left" size={20} color={colors.accent} />
+                <Text style={styles.link}>Volver</Text>
+              </Pressable>
+            )}
+            {page === "appearance" && (
+              <View style={styles.card}>
+                <Text style={styles.section}>Apariencia</Text>
+                <Text style={styles.body}>
+                  Un espacio a tu medida, para tus días y tus cuentas.
+                </Text>
+                {button(
+                  dark ? "Cambiar a modo claro" : "Cambiar a modo nocturno",
+                  () => {
+                    toggle();
+                    notify(
+                      dark ? "Modo claro activado" : "Modo nocturno activado",
+                    );
+                  },
+                )}
+              </View>
+            )}
+            {page === "security" && <SecuritySettings />}
+            {page === "categories" && (
+              <View style={styles.card}>
+                <Text style={styles.section}>Categorías de gasto</Text>
+                <Text style={styles.body}>
+                  Agrega o renombra categorías. Los movimientos y presupuestos
+                  conservan su historial.
+                </Text>
+                {state.categories
+                  .filter((c) => c.type === "expense")
+                  .map((c) => (
+                    <View
+                      key={c.id}
+                      style={[
+                        styles.row,
+                        { alignItems: "center", flexWrap: "wrap" },
+                      ]}
+                    >
+                      <CategoryTag id={c.id} name={c.name} />
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Renombrar categoría ${c.name}`}
+                        style={styles.chip}
+                        disabled={busy}
+                        onPress={() => {
+                          setCategoryId(c.id);
+                          setCategoryName(c.name);
+                          setCategoryMessage("");
+                        }}
+                      >
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <AppIcon
+                            name="edit"
+                            size={14}
+                            color={colors.accent}
+                          />
+                          <Text style={styles.link}>Editar</Text>
+                        </View>
+                      </Pressable>
+                    </View>
+                  ))}
+                <Text style={styles.label}>
+                  {categoryId
+                    ? "Renombrar categoría"
+                    : "Nueva categoría de gasto"}
+                </Text>
+                <TextInput
+                  accessibilityLabel="Nombre de categoría"
+                  value={categoryName}
+                  maxLength={80}
+                  onChangeText={setCategoryName}
+                  style={styles.input}
+                  placeholder="Por ejemplo: Educación"
+                  placeholderTextColor={styles.muted.color}
+                />
+                {button(
+                  categoryId ? "Guardar categoría" : "Agregar categoría",
+                  () => {
+                    setCategoryMessage("");
+                    void run(async () => {
+                      try {
+                        await save({
+                          kind: "category",
+                          value: {
+                            id: categoryId ?? randomUUID(),
+                            name: categoryName,
+                            type: "expense",
+                          },
+                        });
+                        setCategoryId(null);
+                        setCategoryName("");
+                        setCategoryMessage("Categoría guardada");
+                      } catch (error) {
+                        notify(
+                          error instanceof Error && error.name !== "ZodError"
+                            ? error.message
+                            : "Introduce un nombre de 1 a 80 caracteres",
+                          "error",
+                        );
+                        setCategoryMessage(
+                          error instanceof Error && error.name !== "ZodError"
+                            ? error.message
+                            : "Introduce un nombre de 1 a 80 caracteres",
+                        );
+                      }
+                    }, "");
+                  },
+                )}
+                {categoryId &&
+                  button("Cancelar edición de categoría", () => {
                     setCategoryId(null);
                     setCategoryName("");
-                    setCategoryMessage("Categoría guardada");
-                  } catch (error) {
-                    notify(
-                      error instanceof Error && error.name !== "ZodError"
-                        ? error.message
-                        : "Introduce un nombre de 1 a 80 caracteres",
-                      "error",
-                    );
-                    setCategoryMessage(
-                      error instanceof Error && error.name !== "ZodError"
-                        ? error.message
-                        : "Introduce un nombre de 1 a 80 caracteres",
-                    );
-                  }
-                }, "");
-              },
+                    setCategoryMessage("");
+                  })}
+                {!!categoryMessage && (
+                  <Text accessibilityRole="alert" style={styles.body}>
+                    {categoryMessage}
+                  </Text>
+                )}
+              </View>
             )}
-            {categoryId &&
-              button("Cancelar edición de categoría", () => {
-                setCategoryId(null);
-                setCategoryName("");
-                setCategoryMessage("");
-              })}
-            {!!categoryMessage && (
-              <Text accessibilityRole="alert" style={styles.body}>
-                {categoryMessage}
-              </Text>
+            {page === "backup" && (
+              <View style={styles.card}>
+                <Text style={styles.section}>Copias de seguridad</Text>
+                <Text style={styles.body}>
+                  Tus datos se guardan automáticamente en este dispositivo.
+                  Descarga una copia JSON para recuperarlos después de
+                  reinstalar o cambiar de teléfono.
+                </Text>
+                {button("Descargar copia JSON", () => {
+                  void run(
+                    () => downloadBackup(state),
+                    "Copia generada. Guárdala fuera de la aplicación.",
+                    "backup",
+                  );
+                })}
+                {button("Cargar copia de seguridad", () => {
+                  void run(
+                    async () => {
+                      setPending(null);
+                      const next = await pickBackup();
+                      if (next) setPending(next);
+                    },
+                    "",
+                    "backup",
+                  );
+                })}
+                {busy && messageArea === "backup" && (
+                  <Text accessibilityLiveRegion="polite" style={styles.body}>
+                    Procesando…
+                  </Text>
+                )}
+                {!!message && messageArea === "backup" && (
+                  <Text accessibilityRole="alert" style={styles.body}>
+                    {message}
+                  </Text>
+                )}
+                <Text style={styles.muted}>
+                  El archivo contiene tus datos financieros, sin contraseña ni
+                  sesión. Guárdalo en un lugar privado.
+                </Text>
+                {restoreConfirmation}
+              </View>
             )}
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.section}>Copias de seguridad</Text>
-            <Text style={styles.body}>
-              Tus datos se guardan automáticamente en este dispositivo. Descarga
-              una copia JSON para recuperarlos después de reinstalar o cambiar
-              de teléfono.
-            </Text>
-            {button("Descargar copia JSON", () => {
-              void run(
-                () => downloadBackup(state),
-                "Copia generada. Guárdala fuera de la aplicación.",
-                "backup",
-              );
-            })}
-            {button("Cargar copia de seguridad", () => {
-              void run(
-                async () => {
-                  setPending(null);
-                  const next = await pickBackup();
-                  if (next) setPending(next);
-                },
-                "",
-                "backup",
-              );
-            })}
-            {busy && messageArea === "backup" && (
-              <Text accessibilityLiveRegion="polite" style={styles.body}>
-                Procesando…
-              </Text>
-            )}
-            {!!message && messageArea === "backup" && (
-              <Text accessibilityRole="alert" style={styles.body}>
-                {message}
-              </Text>
-            )}
-            <Text style={styles.muted}>
-              El archivo contiene tus datos financieros, sin contraseña ni
-              sesión. Guárdalo en un lugar privado.
-            </Text>
-            {restoreConfirmation}
-          </View>
-          <Licenses />
+            {page === "licenses" && <Licenses />}
+          </Animated.View>
         </>
       )}
       {profile && (

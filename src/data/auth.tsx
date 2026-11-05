@@ -80,6 +80,24 @@ export const supabase =
         },
       })
     : null;
+// Capture a verified recovery event even if native security delays the React tree.
+let earlyRecovery: { userId: string; expiresAt: number } | null = null;
+if (supabase && !serverRendering)
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === "PASSWORD_RECOVERY" && session) {
+      earlyRecovery = {
+        userId: session.user.id,
+        expiresAt: Date.now() + 15 * 60 * 1000,
+      };
+      void AsyncStorage.setItem(
+        RECOVERY_MARKER,
+        JSON.stringify(earlyRecovery),
+      ).catch(() => {});
+    } else if (event === "SIGNED_OUT") {
+      earlyRecovery = null;
+      void AsyncStorage.removeItem(RECOVERY_MARKER).catch(() => {});
+    }
+  });
 const AuthContext = createContext<{
   session: Session | null;
   loading: boolean;
@@ -180,7 +198,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (alive) {
           const current = eventReceived ? eventSession : data.session;
           if (!eventReceived) setSession(current);
-          if (current && validRecoveryMarker(raw, current.user.id))
+          if (
+            current &&
+            (validRecoveryMarker(raw, current.user.id) ||
+              validRecoveryMarker(
+                earlyRecovery ? JSON.stringify(earlyRecovery) : null,
+                current.user.id,
+              ))
+          )
             setRecovering(true);
           setLoading(false);
         }
@@ -225,6 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
   }, [accountNotice]);
   const finishRecovery = async () => {
+    earlyRecovery = null;
     setRecovering(false);
     await AsyncStorage.removeItem(RECOVERY_MARKER).catch(() => {});
   };

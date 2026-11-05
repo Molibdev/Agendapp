@@ -34,7 +34,7 @@ La tipografía es Inter en pesos 400, 500, 600 y 700, incluida como recursos loc
 
 **Perfil**, icono de persona junto al engranaje, contiene Cuenta y sincronización y Google Drive. Conserva Google/correo, recuperación, cierre de sesión, borrado local protegido, sincronización, renovación de autorización y respaldo diario. La restauración desde Drive se revisa y confirma dentro de Perfil; cancelar no cambia los datos.
 
-**Ajustes**, engranaje, contiene modo claro/nocturno, categorías, copias JSON locales y licencias. Los datos, sesiones y configuración pública existentes se reutilizan; este rediseño no requiere nuevas migraciones ni volver a desplegar Supabase.
+**Ajustes**, engranaje, presenta accesos a Apariencia, Seguridad, Categorías de gasto, Copias de seguridad y Créditos y licencias. Cada detalle tiene regreso al menú. Los datos, sesiones y configuración pública existentes se reutilizan; este rediseño no requiere nuevas migraciones ni volver a desplegar Supabase.
 
 Las capturas de referencia también muestran funciones bancarias y cuotas que no son parte de este cambio. El rediseño presenta las funciones actuales de Agendapp.
 
@@ -52,6 +52,7 @@ Las capturas de referencia también muestran funciones bancarias y cuotas que no
 - `npm test`: reglas existentes y gráfico acumulado (ingresos/transferencias excluidos, días sin gasto, año bisiesto y conservación del estado).
 - `npm run build:web` y `npm run test:web`: finanzas, edición, datos JSON, exportación, contraste y Agenda.
 - `npm run test:design:web`: diseños de 320/390/768/1280 px, temas, gráfico, cambio a febrero, búsqueda, filtros, separación de Perfil, relleno compacto y áreas táctiles.
+- `npm run test:preferences:web`: submenús, pantalla de Seguridad, opacidad y secuencia de menús emergentes, y retirada de pagos con historial.
 - `npm run test:interactions:web`: presión de botones, menú flotante, arrastre de paneles, campos de hora y diseño con altura reducida. Ver [interacciones y selectores](interactions-and-inputs.md).
 - `npm run test:branding:web`: inicio animado y con movimiento reducido, ubicación de la barra inferior y del +, doble toque del logo, versión, avisos compactos y transiciones interrumpidas.
 - `npm run test:accounts:web`: recuperación, confirmación, cierre, limpieza local y otras cuentas; respaldo diario y revisión/cancelación de copia Drive en Perfil, con servicios simulados.

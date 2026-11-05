@@ -1,6 +1,6 @@
 {
   "name": "agendapp",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -16,6 +16,7 @@
     "expo-file-system": "~58.0.13",
     "expo-font": "~58.0.11",
     "expo-linking": "~58.0.15",
+    "expo-local-authentication": "~58.0.2",
     "expo-notifications": "~58.1.7",
     "expo-router": "~58.0.29",
     "expo-secure-store": "~58.0.2",
@@ -47,7 +48,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx tests/finance.test.ts && node --import tsx tests/backup.test.ts && node --import tsx tests/sync.test.ts && node --import tsx tests/accounts.test.ts && node --import tsx tests/agenda.test.ts && node --import tsx tests/drive.test.ts && node --import tsx tests/account.test.ts && node --import tsx tests/automation.test.ts && node --import tsx tests/driveService.test.ts && node --import tsx tests/insights.test.ts && node --import tsx tests/installments.test.ts",
+    "test": "node --import tsx tests/finance.test.ts && node --import tsx tests/backup.test.ts && node --import tsx tests/sync.test.ts && node --import tsx tests/accounts.test.ts && node --import tsx tests/agenda.test.ts && node --import tsx tests/drive.test.ts && node --import tsx tests/account.test.ts && node --import tsx tests/automation.test.ts && node --import tsx tests/driveService.test.ts && node --import tsx tests/insights.test.ts && node --import tsx tests/installments.test.ts && node --import tsx tests/recurringRemoval.test.ts && node --import tsx tests/appLock.test.ts",
     "build:web": "expo export --platform web",
     "test:web": "node scripts/smoke-web.mjs && node scripts/smoke-agenda.mjs",
     "test:ssr": "node scripts/check-web-ssr.mjs",
@@ -58,7 +59,8 @@
     "test:design:web": "node scripts/smoke-redesign.mjs",
     "test:branding:web": "node scripts/smoke-branding.mjs",
     "test:interactions:web": "node scripts/smoke-interactions.mjs",
-    "test:installments:web": "node scripts/smoke-installments.mjs"
+    "test:installments:web": "node scripts/smoke-installments.mjs",
+    "test:preferences:web": "node scripts/smoke-preferences.mjs"
   },
   "private": true,
   "allowScripts": {

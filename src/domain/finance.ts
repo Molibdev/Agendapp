@@ -95,14 +95,18 @@ export const recurringSchema = transactionSchema
     nextDate: dateSchema,
     active: z.boolean(),
     installments: installmentSchema.optional(),
+    archived: z.boolean().optional(),
     type: z.enum(["expense", "income", "installment"]),
   })
   .refine(
     (r) =>
-      (!r.installments && r.type !== "installment") ||
-      (r.type === "installment" &&
-        !!r.installments &&
-        (r.installments.paid < r.installments.count || !r.active)),
+      (!r.archived ||
+        (!r.active &&
+          (!r.installments || r.installments.paid === r.installments.count))) &&
+      ((!r.installments && r.type !== "installment") ||
+        (r.type === "installment" &&
+          !!r.installments &&
+          (r.installments.paid < r.installments.count || !r.active))),
     "Revisa el estado del plan",
   );
 export const stateSchema = z.object({
@@ -125,6 +129,7 @@ export type Command =
   | { kind: "delete-event"; id: string }
   | { kind: "recurring"; value: z.infer<typeof recurringSchema> }
   | { kind: "toggle-recurring"; id: string }
+  | { kind: "delete-recurring"; id: string }
   | { kind: "resize-installments"; id: string; count: number; date: string }
   | { kind: "settle-installments"; id: string; date: string }
   | { kind: "process-recurring"; date: string }
@@ -258,6 +263,8 @@ export function apply(s: State, c: Command): State {
     case "recurring": {
       const r = recurringSchema.parse(c.value);
       account(r.accountId);
+      if (r.archived || s.recurring.some((x) => x.id === r.id && x.archived))
+        throw new Error("El registro ya fue retirado");
       if (s.recurring.some((x) => x.id === r.id && x.installments))
         throw new Error("Usa Editar cuotas para modificar un plan existente");
       if (
@@ -295,11 +302,26 @@ export function apply(s: State, c: Command): State {
         ],
       };
     }
+    case "delete-recurring": {
+      const r = s.recurring.find((r) => r.id === c.id);
+      if (!r || r.archived) return s;
+      if (r.installments && r.installments.paid < r.installments.count)
+        throw new Error(
+          "Solo puedes retirar una compra en cuotas cuando esté totalmente pagada",
+        );
+      return {
+        ...s,
+        recurring: s.recurring.map((r) =>
+          r.id === c.id ? { ...r, active: false, archived: true } : r,
+        ),
+      };
+    }
     case "toggle-recurring":
       return {
         ...s,
         recurring: s.recurring.map((r) =>
           r.id === c.id &&
+          !r.archived &&
           (!r.installments || r.installments.paid < r.installments.count)
             ? { ...r, active: !r.active }
             : r,
@@ -515,6 +537,7 @@ export function processRecurring(state: State, through: string): State {
     let plan = rule.installments ? { ...rule.installments } : undefined;
     while (
       rule.active &&
+      !rule.archived &&
       (!plan || plan.paid < plan.count) &&
       nextDate <= through
     ) {
@@ -628,7 +651,7 @@ export function installmentProjection(s: State, month: string) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error("Mes inválido");
   let total = 0;
   for (const r of s.recurring) {
-    if (!r.active || !r.installments) continue;
+    if (!r.active || r.archived || !r.installments) continue;
     let p = { ...r.installments },
       date = r.nextDate;
     while (p.paid < p.count && date.slice(0, 7) <= month) {

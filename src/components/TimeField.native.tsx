@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Keyboard, Platform, Text, View } from "react-native";
 import DateTimePicker, {
   DateTimePickerAndroid,
@@ -14,6 +14,13 @@ type Props = {
 export function TimeField({ label, value, onChange }: Props) {
   const { styles, dark } = useTheme(),
     [visible, setVisible] = useState(false);
+  useEffect(
+    () => () => {
+      if (Platform.OS === "android")
+        void DateTimePickerAndroid.dismiss("time").catch(() => {});
+    },
+    [],
+  );
   const date = new Date();
   const [h, m] = value.split(":").map(Number);
   date.setHours(Number.isFinite(h) ? h : 9, Number.isFinite(m) ? m : 0, 0, 0);

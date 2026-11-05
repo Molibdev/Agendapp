@@ -94,6 +94,7 @@ export function createWorkbook(s: State, from: string, to: string) {
       "Cuotas registradas",
       "Pendiente CLP",
       "Pago anticipado",
+      "Retirado de la lista",
     ],
     ...s.recurring.map((r) => [
       r.id,
@@ -114,6 +115,7 @@ export function createWorkbook(s: State, from: string, to: string) {
           r.installments.paidAmount
         : "",
       r.installments?.settledAt ?? "",
+      r.archived ?? false,
     ]),
   ]);
   add("Metas", [

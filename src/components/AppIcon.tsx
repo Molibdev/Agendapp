@@ -32,7 +32,11 @@ import WalletIcon from "lucide-react-native/icons/wallet";
 import CloseIcon from "lucide-react-native/icons/x";
 import ClockIcon from "lucide-react-native/icons/clock";
 import CalendarPlusIcon from "lucide-react-native/icons/calendar-plus";
+import FingerprintIcon from "lucide-react-native/icons/fingerprint-pattern";
+import PaletteIcon from "lucide-react-native/icons/palette";
 const icons = {
+  fingerprint: FingerprintIcon,
+  palette: PaletteIcon,
   calendarPlus: CalendarPlusIcon,
   clock: ClockIcon,
   activity: ActivityIcon,

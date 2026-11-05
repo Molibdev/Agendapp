@@ -91,6 +91,7 @@ export function Sheet({
       ) {
         Keyboard.dismiss();
         current.current.onClose();
+        return;
       }
       reset();
     },
@@ -99,7 +100,10 @@ export function Sheet({
   return (
     <KeyboardAvoidingView
       testID="sheet-overlay"
-      style={[styles.overlay, { paddingTop: insets.top + 12 }]}
+      style={[
+        styles.overlay,
+        { paddingTop: insets.top + 12, backgroundColor: "transparent" },
+      ]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <Animated.View

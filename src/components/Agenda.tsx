@@ -1,3 +1,4 @@
+import { SheetModal } from "./SheetModal";
 import { TimeField } from "./TimeField";
 import { Sheet } from "./Sheet";
 import { Pressable } from "./Pressable";
@@ -11,7 +12,6 @@ import React, {
 } from "react";
 import {
   AppState,
-  Modal,
   ScrollView,
   Switch,
   Text,
@@ -520,10 +520,8 @@ export function Agenda({
         Hora local del dispositivo ·{" "}
         {Intl.DateTimeFormat().resolvedOptions().timeZone || "zona local"}
       </Text>
-      <Modal
+      <SheetModal
         visible={draft !== null || calendar.request !== null}
-        transparent
-        animationType="slide"
         onRequestClose={() => {
           if (calendar.request) calendar.close();
           else if (!busy) setDraft(null);
@@ -642,7 +640,7 @@ export function Agenda({
           modal
           active={draft !== null || calendar.request !== null}
         />
-      </Modal>
+      </SheetModal>
     </View>
   );
 }

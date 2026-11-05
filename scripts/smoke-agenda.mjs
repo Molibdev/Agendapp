@@ -1,3 +1,4 @@
+import { settingsSection } from "./settings-navigation.mjs";
 import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -148,6 +149,7 @@ try {
   // Backups retain event data and preferences without activating notifications.
   await button("Abrir ajustes").click();
   const downloadPromise = page.waitForEvent("download");
+  await settingsSection(page, "Copias de seguridad");
   await button("Descargar copia JSON").click();
   const download = await downloadPromise;
   const backup = JSON.parse(readFileSync(await download.path(), "utf8"));
@@ -187,6 +189,7 @@ try {
     false,
   );
   await button("Abrir ajustes").click();
+  await settingsSection(page, "Apariencia");
   await button("Cambiar a modo nocturno").click();
   await button("Cerrar ajustes").click();
   await page.getByRole("tab", { name: "Agenda", exact: true }).click();
@@ -211,6 +214,7 @@ try {
   // Restore the downloaded snapshot after deletion, retaining event metadata.
   await button("Abrir ajustes").click();
   const chooser = page.waitForEvent("filechooser");
+  await settingsSection(page, "Copias de seguridad");
   await button("Cargar copia de seguridad").click();
   await (
     await chooser
