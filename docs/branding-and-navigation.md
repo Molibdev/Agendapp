@@ -16,7 +16,9 @@ El límite corresponde a la animación añadida; el arranque del sistema, la car
 
 ## Navegación y avisos
 
-La barra inferior tiene cinco iconos, selección violeta y etiquetas accesibles. El + conserva su acción de registrar gasto y queda 12 px sobre la barra. Perfil y Ajustes usan salida/entrada con opacidad y desplazamiento muy breve, cancelables si se toca otra sección. La preferencia de reducir movimiento elimina esas transiciones.
+La barra inferior tiene cinco iconos, selección violeta y etiquetas accesibles. El + conserva su acción de registrar gasto y queda 12 px sobre la barra. Todas las secciones, Perfil, Ajustes y sus submenús cambian de contenido al pulsar, sin esperar una animación de salida. La entrada dura 100 ms, con desplazamiento de 2 px y opacidad inicial del 94 % para mantener el contenido legible. Una nueva selección interrumpe la animación anterior; reducir movimiento elimina la animación. El cambio entre engranaje/usuario y X también dura 100 ms.
+
+`npm run test:navigation:web` comprueba el tiempo hasta mostrar cada destino, el final de la transición, la ausencia de pantallas en blanco, las pulsaciones rápidas y la navegación con movimiento reducido. Se ejecuta con el export web servido en el puerto 8081; los tiempos del navegador de pruebas no sustituyen la medición en Android físico.
 
 Los avisos cortos ocupan unos 56–58 px de alto; los largos crecen para no recortar el texto. El indicador de éxito/error va al final, separado por un espacio. El cierre sigue teniendo 44 px de área táctil.
 

@@ -43,12 +43,8 @@ export function useReducedMotion() {
 }
 export function useSectionTransition<T extends string>(initial: T) {
   const reduced = useReducedMotion(),
-    [current, setCurrent] = useState(initial),
-    [selected, setSelected] = useState(initial);
-  const rendered = useRef(initial),
-    desired = useRef(initial),
-    generation = useRef(0),
-    entering = useRef(false);
+    [current, setCurrent] = useState(initial);
+  const desired = useRef(initial);
   const opacity = useRef(new Animated.Value(1)).current,
     y = useRef(new Animated.Value(0)).current;
   const animation = useRef<Animated.CompositeAnimation | null>(null);
@@ -56,13 +52,15 @@ export function useSectionTransition<T extends string>(initial: T) {
     animation.current = Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 220,
+        duration: 100,
+        isInteraction: false,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: Platform.OS !== "web",
       }),
       Animated.timing(y, {
         toValue: 0,
-        duration: 220,
+        duration: 100,
+        isInteraction: false,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: Platform.OS !== "web",
       }),
@@ -70,24 +68,13 @@ export function useSectionTransition<T extends string>(initial: T) {
     animation.current.start();
   }, [opacity, y]);
   useEffect(() => {
-    if (entering.current) {
-      entering.current = false;
-      enter();
-    }
-  }, [current, enter]);
-  useEffect(() => {
     if (!reduced) return;
-    generation.current++;
     animation.current?.stop();
-    entering.current = false;
     opacity.setValue(1);
     y.setValue(0);
-    rendered.current = desired.current;
-    setCurrent(desired.current);
   }, [reduced, opacity, y]);
   useEffect(
     () => () => {
-      generation.current++;
       animation.current?.stop();
     },
     [],
@@ -96,41 +83,20 @@ export function useSectionTransition<T extends string>(initial: T) {
     (next: T) => {
       if (next === desired.current) return;
       desired.current = next;
-      setSelected(next);
-      const id = ++generation.current;
       animation.current?.stop();
-      entering.current = false;
-      if (reduced) {
-        rendered.current = next;
-        setCurrent(next);
-        opacity.setValue(1);
-        y.setValue(0);
-        return;
-      }
-      // Cancelling an opening transition restores the still-visible screen.
-      if (next === rendered.current) {
-        enter();
-        return;
-      }
-      animation.current = Animated.timing(opacity, {
-        toValue: 0,
-        duration: 80,
-        easing: Easing.inOut(Easing.quad),
-        useNativeDriver: Platform.OS !== "web",
-      });
-      animation.current.start(({ finished }) => {
-        if (!finished || generation.current !== id) return;
-        y.setValue(5);
-        entering.current = true;
-        rendered.current = next;
-        setCurrent(next);
-      });
+      // Commit the destination in the press handler: navigation never waits for
+      // an animation callback or renders the old screen with a new selection.
+      // Keep the destination readable throughout the brief entry animation.
+      opacity.setValue(reduced ? 1 : 0.94);
+      y.setValue(reduced ? 0 : 2);
+      setCurrent(next);
+      if (!reduced) enter();
     },
     [reduced, opacity, y, enter],
   );
   return {
     current,
-    selected,
+    selected: current,
     navigate,
     style: { opacity, transform: [{ translateY: y }] },
   };

@@ -1,6 +1,6 @@
 {
   "name": "agendapp",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -61,6 +61,7 @@
     "check:public-key": "node scripts/check-public-client-key.mjs",
     "test:design:web": "node scripts/smoke-redesign.mjs",
     "test:branding:web": "node scripts/smoke-branding.mjs",
+    "test:navigation:web": "node scripts/smoke-navigation.mjs",
     "test:interactions:web": "node scripts/smoke-interactions.mjs",
     "test:installments:web": "node scripts/smoke-installments.mjs",
     "test:preferences:web": "node scripts/smoke-preferences.mjs",

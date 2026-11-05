@@ -2,7 +2,7 @@
 
 El perfil `preview` genera una APK de distribución interna con el JavaScript y los recursos incorporados. Se abre desde el icono de Agendapp, sin Expo Go, Metro, QR de desarrollo ni PC encendido. El perfil `development` sigue disponible para desarrollar con Metro.
 
-Esta APK conserva `com.molibdev.agendapp`, el proyecto EAS existente y el retorno OAuth `agendapp:///`. La versión de este lote es 0.12.1. Los datos locales se pueden usar sin internet; iniciar sesión, sincronizar y acceder a Google Drive requieren conexión.
+Esta APK conserva `com.molibdev.agendapp`, el proyecto EAS existente y el retorno OAuth `agendapp:///`. La versión de este lote es 0.12.2. Los datos locales se pueden usar sin internet; iniciar sesión, sincronizar y acceder a Google Drive requieren conexión.
 
 ## 1. Actualizar el repositorio en Windows
 
@@ -56,7 +56,7 @@ El comando envía el código a EAS y muestra un enlace al build. Espera al estad
 2. Instala la APK sobre la app existente. Se conserva el identificador y se reutiliza la firma de EAS para permitir la actualización. Si Android rechaza la firma, comparte el mensaje y revisa las credenciales; no desinstales para resolverlo sin respaldar primero los datos.
 3. Cierra Metro y apaga o desconecta el PC.
 4. Abre Agendapp desde su icono: debe mostrar el inicio de la app directamente, sin launcher de desarrollo ni solicitud de servidor.
-5. Cierra y abre la app de nuevo; revisa los datos y el aviso de versión con doble toque en el logo (0.12.1).
+5. Cierra y abre la app de nuevo; revisa los datos y el aviso de versión con doble toque en el logo (0.12.2).
 6. Con internet en el teléfono, prueba Google, sincronización y Drive. El retorno `agendapp:///` debe seguir registrado en Supabase → Authentication → URL Configuration → Redirect URLs, tal como en la APK de desarrollo.
 7. Activa modo avión, abre la app y prueba consultar o crear datos locales. Desactívalo para probar la sincronización.
 

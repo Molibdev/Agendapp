@@ -23,7 +23,8 @@ export function SettingsToggle({
     }
     const motion = Animated.timing(progress, {
       toValue: open ? 1 : 0,
-      duration: 240,
+      duration: 100,
+      isInteraction: false,
       easing: Easing.inOut(Easing.quad),
       useNativeDriver: Platform.OS !== "web",
     });
