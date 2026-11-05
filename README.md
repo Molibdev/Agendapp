@@ -27,7 +27,7 @@ Stack: Expo 58, React Native 0.88, React 19.3, Expo Router, TypeScript, TanStack
 - **Agenda**: calendario mensual y franjas horarias de día/semana con eventos simultáneos y de varios días. Crear, editar y eliminar con confirmación; título, fechas y horas de inicio/fin, locación y descripción. Navegación al pasado/futuro y botón Hoy con el reloj local del teléfono.
 - Recordatorios locales de Agenda en Android, un día antes a la misma hora y/o al comenzar el evento. Se reprograman al editar y se cancelan al eliminar o cambiar de perfil. Requieren una nueva compilación Android y permiso de notificaciones.
 - Avisos flotantes para cambios guardados, sincronización, exportaciones y errores; cola compartida entre pantallas y editores, colores según el tema y cierre accesible.
-- Marca violeta renovada, iconos nativos e inicio animado breve; navegación inferior solo con iconos y botón + separado. El doble toque del logo muestra créditos y versión (0.11.0).
+- Marca violeta renovada, iconos nativos e inicio animado breve; navegación inferior solo con iconos y botón + separado. El doble toque del logo muestra créditos y la versión actual de la app.
 - Ajustes desde el icono del encabezado: transición suave entre engranaje y X; la X vuelve a Inicio. Respeta la preferencia del sistema de reducir movimiento.
 - Ajustes: apariencia, copias locales y categorías de gasto personalizadas. Perfil, desde el icono de usuario junto al engranaje: cuenta, sincronización y Google Drive, con paneles compactos y confirmación de restauración propia.
 - Calendario móvil desplazable, adaptado al alto disponible, con selección y día actual destacados. Colores y contornos con mayor contraste en ambos temas.
@@ -60,7 +60,9 @@ La marca visible es Agendapp. El paquete npm y el slug de Expo usan `agendapp`. 
 
 El repositorio está en `Molibdev/Agendapp`. Los checkouts que conserven el remoto anterior pueden actualizarlo con `git remote set-url origin https://github.com/Molibdev/Agendapp.git`.
 
-## Android: compilación de desarrollo
+## Android: APK de prueba y compilación de desarrollo
+
+Para probar sin Metro ni el PC, sigue la [guía de APK independiente](docs/android-preview.md). El perfil EAS `preview` incorpora el código y los recursos; genera la APK con `npm run build:android:preview`. Configura primero las tres variables públicas en el entorno `preview` del proyecto en Expo, como indica la guía. La generación se detiene si faltan para evitar entregar una APK sin Supabase o Drive.
 
 Ver [guía Android](docs/android-development.md). El proyecto incluye `expo-dev-client` y el perfil EAS `development`, que genera un APK para instalar en el teléfono. La vinculación EAS del proyecto existente ya está versionada bajo `molibdev`. Se requiere iniciar sesión con una cuenta que tenga acceso y generar el APK de esta rama; no es necesario volver a ejecutar `eas init`. Después de instalar, iniciar Metro con `npm run start:dev` y abrir la app Agendapp instalada. El retorno de Google en Android es `agendapp:///`, registrado en las Redirect URLs de Supabase.
 

@@ -1,5 +1,7 @@
 # Agendapp: compilación de desarrollo Android
 
+Para una APK que funcione **sin Metro ni PC**, sigue [APK independiente de pruebas](android-preview.md) y usa `npm run build:android:preview`. Esta guía describe el cliente `development` para programar con Metro.
+
 Esta etapa prepara una app Android propia con `expo-dev-client`. No publica en Google Play ni prepara una versión de producción. El identificador Android es `com.molibdev.agendapp`; el perfil EAS `development` genera un APK de distribución interna con Node 24.19.0. No se necesita Android Studio para usar EAS Build en la nube.
 
 ## Estado y requisitos

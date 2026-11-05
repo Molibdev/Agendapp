@@ -12,6 +12,16 @@
         "buildType": "apk"
       },
       "node": "24.19.0"
+    },
+    "preview": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "environment": "preview",
+      "credentialsSource": "remote",
+      "android": {
+        "buildType": "apk"
+      },
+      "node": "24.19.0"
     }
   }
 }

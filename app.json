@@ -2,7 +2,7 @@
   "expo": {
     "name": "Agendapp",
     "slug": "agendapp",
-    "version": "0.12.0",
+    "version": "0.12.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -25,10 +25,7 @@
       "output": "static",
       "favicon": "./assets/favicon.png"
     },
-    "scheme": [
-      "agendapp",
-      "qgasto"
-    ],
+    "scheme": ["agendapp", "qgasto"],
     "plugins": [
       "expo-router",
       "expo-sharing",
